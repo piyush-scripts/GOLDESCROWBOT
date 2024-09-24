@@ -1,0 +1,27 @@
+{
+  "name": "goldescrowbot",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@swyftx/api-crypto-address-validator": "^1.13.1",
+    "@types/pg": "^8.11.10",
+    "axios": "^1.7.7",
+    "bitcoinjs-lib": "^7.0.0-rc.0",
+    "ecpair": "^3.0.0-rc.0",
+    "nodemon": "^3.1.5",
+    "pg": "^8.13.0",
+    "telegraf": "^4.16.3",
+    "tiny-secp256k1": "^2.2.3"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
