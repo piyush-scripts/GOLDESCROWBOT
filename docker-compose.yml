@@ -17,7 +17,7 @@ services:
       - /usr/src/app/node_modules
 
   postgres:
-    image: postgres:9.6
+    image: postgres
     restart: on-failure
     ports:
       - "5432:5432"
