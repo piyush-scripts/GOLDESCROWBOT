@@ -3,9 +3,8 @@ import pg from "pg";
 import * as bitcoin from "bitcoinjs-lib";
 import { setDefaultResultOrder } from "node:dns";
 import "dotenv/config";
-import * as ecc from ("tiny-spec256k1");
-import { ECPairFactory } from ("ecpair");
- 
+import * as ecc from "tiny-secp256k1";
+import { ECPairFactory } from "ecpair";
 
 const ECPair = ECPairFactory(ecc);
 const network = bitcoin.networks.testnet;
@@ -15,22 +14,22 @@ function generateEscrowAddress() {
 
   try {
 
-   
+
     const groupId = ctx.chat.id;
 
-const keyPair = ECPair.makeRandom();
-const p2wpkh = bitcoin.payments.p2wpkh({
-  pubkey : keyPair.publicKey,
-  network,
-})
-const privateKey = keyPair.toWIF();
-pool.query("UPDATE  users  set (escrow_btc_address=$1,escrow_private_key=$2) WHERE group_id =$3",[p2wpkh.pubkey,privateKey,groupId])
+    const keyPair = ECPair.makeRandom();
+    const p2wpkh = bitcoin.payments.p2wpkh({
+      pubkey: keyPair.publicKey,
+      network,
+    })
+    const privateKey = keyPair.toWIF();
+    pool.query("UPDATE  users  set (escrow_btc_address=$1,escrow_private_key=$2) WHERE group_id =$3", [p2wpkh.pubkey, privateKey, groupId])
 
 
 
-}  catch (err){
-console.log(err);
-}
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 
@@ -162,9 +161,9 @@ function isValidBTCAddress(address) {
 bot.command("refund", async (ctx) => {
   const userId = ctx.from.id;
   const groupId = ctx.message.from.id;
-  const sellerBtcAddress =await pool.query(
+  const sellerBtcAddress = await pool.query(
     "SELECT seller_btc_address FROM users WHERE group_id=$1 AND seller_user_id=$2",
-    [groupId,userId]
+    [groupId, userId]
   );
 
   if (users[userId] && users[userId].role === "seller") {
