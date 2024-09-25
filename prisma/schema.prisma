@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// CREATE TABLE users (
+//     seller_user_id bigint,
+//     buyer_user_id bigint,
+//     group_id bigint,
+//     seller_btc_address text,
+//     buyer_btc_address text,
+//     escrow_btc_address text,
+//     escrow_private_key text);
+
+model User {
+  group_id           Int @id
+  seller_user_id     BigInt?
+  buyer_user_id      BigInt?
+  seller_btc_address String?
+  buyer_btc_address  String?
+  escrow_btc_address String?
+  escrow_private_key String?
+}

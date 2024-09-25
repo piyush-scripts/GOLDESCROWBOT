@@ -1,39 +1,55 @@
-import { Telegraf } from "telegraf";
-import pg from "pg";
-import * as bitcoin from "bitcoinjs-lib";
-import { setDefaultResultOrder } from "node:dns";
-import "dotenv/config";
-import * as ecc from "tiny-secp256k1";
-import { ECPairFactory } from "ecpair";
+const { Telegraf } = require("telegraf");
+const pg = require("pg");
+const bitcoin = require("bitcoinjs-lib");
+const { setDefaultResultOrder } = require("node:dns");
+const dotenv = require("dotenv");
+const tinysecp = require("tiny-secp256k1");
+const { ECPairFactory } = require("ecpair");
+const db = require("./db");
 
-const ECPair = ECPairFactory(ecc);
+dotenv.config();
+
+const ECPair = ECPairFactory(tinysecp);
 const network = bitcoin.networks.testnet;
 
-//generating escrow address
-function generateEscrowAddress() {
-
+/**
+ * @param {number} groupId 
+ */
+async function generateEscrowAddress(groupId) {
   try {
-
-
-    const groupId = ctx.chat.id;
-
     const keyPair = ECPair.makeRandom();
     const p2wpkh = bitcoin.payments.p2wpkh({
       pubkey: keyPair.publicKey,
       network,
-    })
+    });
+
+    const { address } = p2wpkh;
     const privateKey = keyPair.toWIF();
-    pool.query("UPDATE  users  set (escrow_btc_address=$1,escrow_private_key=$2) WHERE group_id =$3", [p2wpkh.pubkey, privateKey, groupId])
+    // pool.query(
+    //   "UPDATE  users  set (escrow_btc_address=$1,escrow_private_key=$2) WHERE group_id =$3",
+    //   [p2wpkh.pubkey, privateKey, groupId]
+    // );
 
+    const users = await db.user.update({
+      where: {
+        group_id: groupId
+      },
+      data: {
+        escrow_btc_address: address,
+        escrow_private_key: privateKey,
+      }
+    });
 
-
+    if (users) {
+      return { message: "success" }
+    } else {
+      throw new Error("Failed to update");
+    }
   } catch (err) {
     console.log(err);
+    return null;
   }
 }
-
-
-
 
 const pool = new pg.Pool({
   host: process.env.DB_HOST,
@@ -41,7 +57,6 @@ const pool = new pg.Pool({
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false },
 });
 
 const bot = new Telegraf(process.env.GOLD_ESCROW_BOT_TOKEN);
@@ -54,35 +69,58 @@ bot.command("seller", async (ctx) => {
     const btcAddress = message.split(" ")[1];
 
     if (btcAddress && isValidBTCAddress(btcAddress)) {
-      const groupMetadata = await pool.query(
-        "SELECT seller_user_id, buyer_user_id FROM users WHERE group_id = $1",
-        [groupId]
-      );
+      // const groupMetadata = await pool.query(
+      //   "SELECT seller_user_id, buyer_user_id FROM users WHERE group_id = $1",
+      //   [groupId]
+      // );
 
-      if (groupMetadata.rows.length !== 0) {
+      const groupMetadata = await db.user.findFirst(parseInt(groupId))
+
+      if (groupMetadata !== null) {
         if (
-          groupMetadata.rows[0]["buyer_user_id"] !== null &&
-          Number(groupMetadata.rows[0]["buyer_user_id"]) === userId
+          groupMetadata.buyer_user_id !== null &&
+          parseInt(groupMetadata.buyer_user_id) === userId
         ) {
           ctx.reply("Buyer can't run /seller command");
           return;
         }
 
-        if (groupMetadata.rows[0]["seller_user_id"] !== null) {
+        if (groupMetadata.seller_user_id !== null) {
           ctx.reply("There already exists a seller in this group");
           return;
         }
 
-        pool.query(
-          "UPDATE users SET seller_user_id = $1, seller_btc_address = $2 WHERE group_id = $3",
-          [userId, btcAddress, groupId]
-        );
+        // pool.query(
+        // "UPDATE users SET seller_user_id = $1, seller_btc_address = $2 WHERE group_id = $3",
+        // [userId, btcAddress, groupId]
+        // );
+
+        await db.user.upsert({
+          where: {
+            group_id: groupId,
+          },
+          create: {
+            seller_user_id: userId,
+            seller_btc_address: btcAddress,
+          }
+        })
+
       } else {
-        pool.query(
-          "INSERT INTO users (group_id, seller_user_id, seller_btc_address) VALUES ($1, $2, $3)",
-          [groupId, userId, btcAddress]
-        );
+        // pool.query(
+        // "INSERT INTO users (group_id, seller_user_id, seller_btc_address) VALUES ($1, $2, $3)",
+        // [groupId, userId, btcAddress]
+        // );
+        await db.user.create({
+          data: {
+            group_id: groupId,
+            seller_user_id: userId,
+            seller_btc_address: btcAddress
+          }
+        })
       }
+
+      generateEscrowAddress(groupId);
+
       ctx.reply("You are now a seller! Your role has been updated.");
     } else {
       ctx.reply(
@@ -102,38 +140,52 @@ bot.command("buyer", async (ctx) => {
     const btcAddress = message.split(" ")[1];
 
     if (btcAddress && isValidBTCAddress(btcAddress)) {
-      const groupMetadata = await pool.query(
-        "SELECT buyer_user_id, seller_user_id FROM users WHERE group_id = $1",
-        [groupId]
-      );
+      // const groupMetadata = await pool.query(
+      //   "SELECT buyer_user_id, seller_user_id FROM users WHERE group_id = $1",
+      //   [groupId]
+      // );
+      const groupMetadata = await db.user.findFirst(groupId);
 
-      if (groupMetadata.rows.length !== 0) {
-        console.log(ctx.from.id);
-        console.log(groupMetadata.rows[0]["seller_user_id"]);
-        console.log(Number(groupMetadata.rows[0][1]) === userId);
-
+      if (groupMetadata !== null) {
         if (
-          groupMetadata.rows[0]["seller_user_id"] !== null &&
-          Number(groupMetadata.rows[0]["seller_user_id"]) === userId
+          groupMetadata.seller_user_id !== null &&
+          parseInt(groupMetadata.seller_user_id) === userId
         ) {
           ctx.reply("Seller can't run /buyer command");
           return;
         }
 
-        if (groupMetadata.rows[0]["buyer_user_id"] !== null) {
+        if (groupMetadata.buyer_user_id !== null) {
           ctx.reply("There already exists a buyer in this group");
           return;
         }
 
-        pool.query(
-          "UPDATE users SET buyer_user_id = $1, buyer_btc_address = $2 WHERE group_id = $3",
-          [userId, btcAddress, groupId]
-        );
+        // pool.query(
+        //   "UPDATE users SET buyer_user_id = $1, buyer_btc_address = $2 WHERE group_id = $3",
+        //   [userId, btcAddress, groupId]
+        // );
+
+        await db.user.update({
+          where: {
+            group_id: groupId
+          },
+          data: {
+            buyer_user_id: userId,
+            buyer_btc_address: btcAddress
+          }
+        })
       } else {
-        pool.query(
-          "INSERT INTO users (group_id, buyer_user_id, buyer_btc_address) VALUES ($1, $2, $3)",
-          [groupId, userId, btcAddress]
-        );
+        // pool.query(
+        //   "INSERT INTO users (group_id, buyer_user_id, buyer_btc_address) VALUES ($1, $2, $3)",
+        //   [groupId, userId, btcAddress]
+        // );
+        await db.user.create({
+          data: {
+            group_id: groupId,
+            buyer_user_id: userId,
+            buyer_btc_address: btcAddress
+          }
+        })
       }
 
       ctx.reply("You are now a buyer! Your role has been updated.");
@@ -161,10 +213,16 @@ function isValidBTCAddress(address) {
 bot.command("refund", async (ctx) => {
   const userId = ctx.from.id;
   const groupId = ctx.message.from.id;
-  const sellerBtcAddress = await pool.query(
-    "SELECT seller_btc_address FROM users WHERE group_id=$1 AND seller_user_id=$2",
-    [groupId, userId]
-  );
+  // const sellerBtcAddress = await pool.query(
+  //   "SELECT seller_btc_address FROM users WHERE group_id=$1 AND seller_user_id=$2",
+  //   [groupId, userId]
+  // );
+  const sellerBtcAddress = await db.user.findFirst({
+    where : {
+      group_id : groupId,
+      seller_user_id : userId,
+    }
+  })
 
   if (users[userId] && users[userId].role === "seller") {
     const groupId = users[userId].groupId;

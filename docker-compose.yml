@@ -1,20 +1,32 @@
 version: "3"
 services:
   app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
     restart: on-failure
-    build: .
     depends_on:
       - postgres
     environment:
-      DATABASE_URL: 
       NODE_ENV: development
       PORT: 3000
+      GOLD_ESCROW_BOT_TOKEN: 7421155089:AAFopZwebdcVvgQcnMDW2tGJA226jRRAUw0
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: db
+      DB_USER: user
+      DB_PASSWORD: pass
+      DATABASE_URL: postgresql://user:pass@postgres:5432/db      
     ports:
       - "3000:3000"
-    command: npm run dev
+      - "5555:5555"  # Expose Prisma Studio port
     volumes:
-      - .:/usr/src/app/
-      - /usr/src/app/node_modules
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./nodemon.json:/usr/src/app/nodemon.json
+    command: >
+      sh -c "npx prisma migrate dev --name init && npx prisma generate && yarn dev"  # Run migrations before starting the app
 
   postgres:
     image: postgres
@@ -25,3 +37,10 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: db
+
+# For production, you could use Docker secrets to store sensitive values.
+# Uncomment and use the following block for that purpose.
+
+# secrets:
+#   gold_escrow_bot_token:
+#     file: ./secrets/gold_escrow_bot_token.txt
