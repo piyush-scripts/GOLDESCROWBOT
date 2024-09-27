@@ -6,22 +6,22 @@ bitcoin.initEccLib(ecc);
 
 // 0.00001 something
 const buyer_wallet = {
-    addr: "mfb3cWWCvKHF7nBbvH4MowBzY2wqhYf3qz",
-    privateKey: "cW4suKjre1c1GScCXTZZ4Ew8BYFzt1VQxGbmqpFZmzfN3cVcoHd8"
-  }
-  
-  // 0.00000011 something
-  const seller_address = {
-    addr: "mkb4PVZ6yWntTegTxSKagwoxPvyXLa9GuC",
-    privateKey: "cQFq5DL3qncPRrTwCfMN9QTFPKZb3EF6jdECGRfL9rYkH977gMkw"
-  }
-  const escrow_wallet = {
-    addr: "mft56CExpwxwoK1WYRqqZWYbYrFMbmZvCp",
-    privateKey: "cVyncARBDYVTUkKGQT78uDt55gy36eJmfQozdLLguLkFPRMwqFw8"
-  }
-  
+    addr: "tb1qzkrprzjxrl8weylt7hy7dx5qcgj3q0v33plwrj",
+    privateKey: "KzwpftN8nedURJjiS2foSLXz7tbcvTLourkJvkttraAUQLs2iGwU"
+}
+
+// 0.00000011 something
+const seller_wallet = {
+    addr: "tb1qkpwnfsnp30gv9cz0y8z2zsc74mal0y53fp4zwf",
+    privateKey: "L4nkq6TkvqDKNuN1WooAfUMzqy4mGurQfawJDcJX7QKpLPrctG6m"
+}
+const escrow_wallet = {
+    addr: "tb1qux5265kpeyys5n6pp8x254g5syg45h0yqmhdh3",
+    privateKey: "L54pB36434Zegb4PMCXsCgN1SwyXsJnntPfTkMtCAZqkNZF74xgp"
+}
+
 const fromAddress = buyer_wallet.addr;
-const toAddress = seller_address.addr;
+const toAddress = seller_wallet.addr;
 const privateKey = buyer_wallet.privateKey;
 const amount = 0.00001; // 1000 satoshis
 
@@ -34,7 +34,7 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
         const dustThreshold = BigInt(546);
 
         if (satoshis < dustThreshold) {
-            throw new Error(`The amount to send (${satoshis} satoshis) is below the dust threshold.`);
+            throw new Error(`The amount to send(${satoshis} satoshis) is below the dust threshold.`);
         }
 
         // Create a new PSBT
@@ -105,6 +105,7 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
 
         // Broadcast the transaction
         const txid = await broadcastTransaction(serializedTx, network);
+        console.log({ txid })
         return txid;
 
     } catch (error) {
@@ -115,19 +116,27 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
 
 
 async function fetchUTXOs(address, network) {
-    const apiUrl = `https://blockstream.info/testnet/api/address/${address}/utxo`;
-    const response = await axios.get(apiUrl);
-    const utxos = await Promise.all(response.data.map(async utxo => {
-        const txResponse = await axios.get(`https://blockstream.info/testnet/api/tx/${utxo.txid}`);
-        console.log(txResponse);
-        return {
-            txid: utxo.txid,
-            vout: utxo.vout,
-            value: utxo.value,
-            scriptPubKey: txResponse.data.vout[utxo.vout].scriptpubkey
-        };
-    }));
-    return utxos;
+    try {
+        const apiUrl = `https://blockstream.info/testnet/api/address/${address}/utxo`
+        console.log({
+            apiUrl
+        })
+        const response = await axios.get(apiUrl);
+        console.log(response.data)
+        const utxos = await Promise.all(response.data.map(async utxo => {
+            console.log(utxo.txid)
+            const txResponse = await axios.get(`https://blockstream.info/testnet/api/tx/${utxo.txid}`);
+            return {
+                txid: utxo.txid,
+                vout: utxo.vout,
+                value: utxo.value,
+                scriptPubKey: txResponse.data.vout[utxo.vout].scriptpubkey
+            };
+        }));
+        return utxos;
+    } catch (error) {
+        console.error({ error })
+    }
 }
 
 async function broadcastTransaction(txHex, network) {
@@ -140,3 +149,4 @@ async function broadcastTransaction(txHex, network) {
 transferBitcoin(fromAddress, toAddress, amount, privateKey)
     .then(txid => console.log('Transaction ID:', { txid }))
     .catch(err => console.error('Error:', { err }));
+// check karo tum apna address daal ke
