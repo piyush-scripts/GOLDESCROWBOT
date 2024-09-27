@@ -12,6 +12,22 @@ dotenv.config();
 const ECPair = ECPairFactory(tinysecp);
 const network = bitcoin.networks.testnet;
 
+// 0.00001 something
+const buyer_wallet = {
+  addr: "mfb3cWWCvKHF7nBbvH4MowBzY2wqhYf3qz",
+  privateKey: "cW4suKjre1c1GScCXTZZ4Ew8BYFzt1VQxGbmqpFZmzfN3cVcoHd8"
+}
+
+// 0.00000011 something
+const seller_address = {
+  addr: "mkb4PVZ6yWntTegTxSKagwoxPvyXLa9GuC",
+  privateKey: "cQFq5DL3qncPRrTwCfMN9QTFPKZb3EF6jdECGRfL9rYkH977gMkw"
+}
+const escrow_wallet = {
+  addr: "mft56CExpwxwoK1WYRqqZWYbYrFMbmZvCp",
+  privateKey: "cVyncARBDYVTUkKGQT78uDt55gy36eJmfQozdLLguLkFPRMwqFw8"
+}
+
 /**
  * @param {number} groupId 
  */
@@ -218,9 +234,9 @@ bot.command("refund", async (ctx) => {
   //   [groupId, userId]
   // );
   const sellerBtcAddress = await db.user.findFirst({
-    where : {
-      group_id : groupId,
-      seller_user_id : userId,
+    where: {
+      group_id: groupId,
+      seller_user_id: userId,
     }
   })
 
