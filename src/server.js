@@ -6,60 +6,11 @@ const dotenv = require("dotenv");
 const tinysecp = require("tiny-secp256k1");
 const { ECPairFactory } = require("ecpair");
 const db = require("./db");
-const { generateEscrowWallet } = require("./wallet");
+const { createEscrowWallet } = require("./wallet");
 const { transferBitcoin, getUTXOS } = require("./txn");
 
 dotenv.config();
-
-const ECPair = ECPairFactory(tinysecp);
 const network = process.env.NODE_ENV === "development" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
-
-// 0.00001 something
-const buyer_wallet = {
-  addr: "mfb3cWWCvKHF7nBbvH4MowBzY2wqhYf3qz",
-  privateKey: "cW4suKjre1c1GScCXTZZ4Ew8BYFzt1VQxGbmqpFZmzfN3cVcoHd8"
-}
-
-// 0.00000011 something
-const seller_address = {
-  addr: "mkb4PVZ6yWntTegTxSKagwoxPvyXLa9GuC",
-  privateKey: "cQFq5DL3qncPRrTwCfMN9QTFPKZb3EF6jdECGRfL9rYkH977gMkw"
-}
-const escrow_wallet = {
-  addr: "mft56CExpwxwoK1WYRqqZWYbYrFMbmZvCp",
-  privateKey: "cVyncARBDYVTUkKGQT78uDt55gy36eJmfQozdLLguLkFPRMwqFw8"
-}
-
-/**
- * @param {number} groupId
- * @returns {{message: string} | null>}
- */
-async function createEscrowWallet(groupId) {
-  const mnemonic = process.env.MNEMONIC
-  try {
-    const db_len = (await db.user.findMany()).length + 1;
-    const { address, privateKey } = generateEscrowWallet(mnemonic, db_len);
-
-    const users = await db.user.update({
-      where: {
-        group_id: groupId
-      },
-      data: {
-        escrow_btc_address: address,
-        escrow_private_key: privateKey,
-      }
-    });
-
-    if (users) {
-      return { message: "success" }
-    } else {
-      throw new Error("Failed to update");
-    }
-  } catch (err) {
-    console.log(err);
-    return null;
-  }
-}
 
 const bot = new Telegraf(process.env.GOLD_ESCROW_BOT_TOKEN);
 

@@ -35,4 +35,35 @@ function generateEscrowWallet(mnemonic, idx) {
     };
 }
 
-module.exports = { generateEscrowWallet };
+/**
+ * @param {number} groupId
+ * @returns {{message: string} | null>}
+ */
+async function createEscrowWallet(groupId) {
+    const mnemonic = process.env.MNEMONIC
+    try {
+        const db_len = (await db.user.findMany()).length;
+        const { address, privateKey } = generateEscrowWallet(mnemonic, db_len);
+
+        const users = await db.user.update({
+            where: {
+                group_id: groupId
+            },
+            data: {
+                escrow_btc_address: address,
+                escrow_private_key: privateKey,
+            }
+        });
+
+        if (users) {
+            return { message: "success" }
+        } else {
+            throw new Error("Failed to update");
+        }
+    } catch (err) {
+        console.log(err);
+        return null;
+    }
+}
+
+module.exports = { createEscrowWallet };
