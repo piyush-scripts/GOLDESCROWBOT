@@ -16,9 +16,10 @@ const derivationPath = "m/44'/0'/0'/0/";
  * Generate a wallet for a user (buyer, seller, or escrow)
  * @param {string} mnemonic 
  * @param {number} idx 
+ * @returns {{ address: string, publicKey: string, privateKey: string }} The generated wallet details.
  */
-async function generateEscrowWallet(mnemonic, idx) {
-    const seed = await bip39.mnemonicToSeed(mnemonic);
+function generateEscrowWallet(mnemonic, idx) {
+    const seed = bip39.mnemonicToSeedSync(mnemonic);
     const root = bip32.fromSeed(seed, network);
     const child = root.derivePath(derivationPath + idx);
 

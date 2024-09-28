@@ -20,12 +20,52 @@ const escrow_wallet = {
     privateKey: "L54pB36434Zegb4PMCXsCgN1SwyXsJnntPfTkMtCAZqkNZF74xgp"
 }
 
-const fromAddress = buyer_wallet.addr;
-const toAddress = seller_wallet.addr;
-const privateKey = buyer_wallet.privateKey;
 const amount = 0.00001; // 1000 satoshis
 
-async function transferBitcoin(fromAddress, toAddress, amount, privateKey, network = bitcoin.networks.testnet) {
+
+/**
+ * 
+ * @param {string} fromAddress 
+ * @param {*} utxos 
+ * @returns {Promise<bigint>}
+ */
+async function getUTXOS(fromAddress) {
+    const utxos = await fetchUTXOs(fromAddress, network);
+
+    // Estimate fee rate and transaction size
+    const feeRate = 10; // satoshis per byte (this can be adjusted)
+    const estimatedTxSize = 180; // estimated size of the transaction in bytes
+    const fee = BigInt(feeRate * estimatedTxSize); // total fee in satoshis
+
+    // Add inputs
+    let totalInput = BigInt(0);
+    for (const utxo of utxos) {
+        psbt.addInput({
+            hash: utxo.txid,
+            index: utxo.vout,
+            witnessUtxo: {
+                script: Buffer.from(utxo.scriptPubKey, 'hex'),
+                value: BigInt(utxo.value)
+            },
+        });
+        totalInput += BigInt(utxo.value);
+        if (totalInput >= satoshis + fee) {
+            break; // Stop adding inputs if we have enough
+        }
+    }
+    return totalInput;
+}
+
+/**
+ * 
+ * @param {string} fromAddress 
+ * @param {string} toAddress 
+ * @param {number} amount 
+ * @param {string} privateKey 
+ * @param {bitcoin.networks.Network} network 
+ * @returns {Promise<string>}
+ */
+async function transferBitcoin(fromAddress, toAddress, amount, privateKey, network) {
     try {
         // Convert amount to satoshis
         const satoshis = BigInt(Math.floor(amount * 100000000));
@@ -87,10 +127,10 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
         }
 
         // Log debugging info
-        console.log(`Total input: ${totalInput}`);
-        console.log(`Amount to send: ${satoshis}`);
-        console.log(`Fee: ${fee}`);
-        console.log(`Change: ${change}`);
+        // console.log(`Total input: ${totalInput}`);
+        // console.log(`Amount to send: ${satoshis}`);
+        // console.log(`Fee: ${fee}`);
+        // console.log(`Change: ${change}`);
 
         // Sign inputs
         const keyPair = bitcoin.ECPair.fromWIF(privateKey, network);
@@ -105,7 +145,7 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
 
         // Broadcast the transaction
         const txid = await broadcastTransaction(serializedTx, network);
-        console.log({ txid })
+
         return txid;
 
     } catch (error) {
@@ -145,8 +185,6 @@ async function broadcastTransaction(txHex, network) {
     return response.data; // Transaction ID
 }
 
-// Usage example:
-transferBitcoin(fromAddress, toAddress, amount, privateKey)
-    .then(txid => console.log('Transaction ID:', { txid }))
-    .catch(err => console.error('Error:', { err }));
-// check karo tum apna address daal ke
+
+
+module.exports = { transferBitcoin, getUTXOS };

@@ -6,11 +6,13 @@ const dotenv = require("dotenv");
 const tinysecp = require("tiny-secp256k1");
 const { ECPairFactory } = require("ecpair");
 const db = require("./db");
+const { generateEscrowWallet } = require("./wallet");
+const { transferBitcoin, getUTXOS } = require("./txn");
 
 dotenv.config();
 
 const ECPair = ECPairFactory(tinysecp);
-const network = bitcoin.networks.testnet;
+const network = process.env.NODE_ENV === "development" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
 
 // 0.00001 something
 const buyer_wallet = {
@@ -29,22 +31,14 @@ const escrow_wallet = {
 }
 
 /**
- * @param {number} groupId 
+ * @param {number} groupId
+ * @returns {{message: string} | null>}
  */
-async function generateEscrowAddress(groupId) {
+async function createEscrowWallet(groupId) {
+  const mnemonic = process.env.MNEMONIC
   try {
-    const keyPair = ECPair.makeRandom();
-    const p2wpkh = bitcoin.payments.p2wpkh({
-      pubkey: keyPair.publicKey,
-      network,
-    });
-
-    const { address } = p2wpkh;
-    const privateKey = keyPair.toWIF();
-    // pool.query(
-    //   "UPDATE  users  set (escrow_btc_address=$1,escrow_private_key=$2) WHERE group_id =$3",
-    //   [p2wpkh.pubkey, privateKey, groupId]
-    // );
+    const db_len = (await db.user.findMany()).length + 1;
+    const { address, privateKey } = generateEscrowWallet(mnemonic, db_len);
 
     const users = await db.user.update({
       where: {
@@ -66,14 +60,6 @@ async function generateEscrowAddress(groupId) {
     return null;
   }
 }
-
-const pool = new pg.Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-});
 
 const bot = new Telegraf(process.env.GOLD_ESCROW_BOT_TOKEN);
 
@@ -135,9 +121,13 @@ bot.command("seller", async (ctx) => {
         })
       }
 
-      generateEscrowAddress(groupId);
+      const res = createEscrowWallet(groupId);
 
-      ctx.reply("You are now a seller! Your role has been updated.");
+      if (res === null) {
+        ctx.reply("Please try again, failed to initialise Escrow Wallet.");
+      } else {
+        ctx.reply("You are now a seller! Your role has been updated.");
+      }
     } else {
       ctx.reply(
         "Please provide a valid BTC address. Example: /seller <btc_address>"
@@ -145,6 +135,7 @@ bot.command("seller", async (ctx) => {
     }
   } catch (err) {
     console.log(err);
+
   }
 });
 
@@ -233,21 +224,73 @@ bot.command("refund", async (ctx) => {
   //   "SELECT seller_btc_address FROM users WHERE group_id=$1 AND seller_user_id=$2",
   //   [groupId, userId]
   // );
-  const sellerBtcAddress = await db.user.findFirst({
+  const group = await db.user.findFirst({
     where: {
       group_id: groupId,
       seller_user_id: userId,
     }
   })
 
-  if (users[userId] && users[userId].role === "seller") {
-    const groupId = users[userId].groupId;
-    ctx.reply(
-      `This is a special command only for sellers in group ${groupId}!`
-    );
+  if (userId === group.seller_user_id) {
+    const fromAddress = group.escrow_btc_address;
+    const privateKey = group.escrow_private_key;
+    const toAddress = group.buyer_btc_address;
+    const amount = await getUTXOS(fromAddress);
+
+    const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
+
+    ctx.reply(`Refunded ${amount} to ${toAddress}\n txid: ${transfer}`)
   } else {
     ctx.reply("You need to be a seller to access this command.");
   }
+
+  // if (users[userId] && users[userId].role === "seller") {
+  //   const groupId = users[userId].groupId;
+  //   ctx.reply(
+  //     `This is a special command only for sellers in group ${groupId}!`
+  //   );
+  // } else {
+  //   ctx.reply("You need to be a seller to access this command.");
+  // }
+
+});
+// Buyer-only command
+bot.command("release", async (ctx) => {
+  const userId = ctx.from.id;
+  const groupId = ctx.message.from.id;
+  // const sellerBtcAddress = await pool.query(
+  //   "SELECT seller_btc_address FROM users WHERE group_id=$1 AND seller_user_id=$2",
+  //   [groupId, userId]
+  // );
+  const group = await db.user.findFirst({
+    where: {
+      group_id: groupId,
+      buyer_user_id: userId,
+    }
+  })
+
+  if (userId === group.seller_user_id) {
+    const fromAddress = group.escrow_btc_address;
+    const privateKey = group.escrow_private_key;
+    const toAddress = group.seller_btc_address;
+    const amount = await getUTXOS(fromAddress);
+
+    const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
+
+    ctx.reply(`Release ${amount} to ${toAddress}\n txid: ${transfer}`)
+  } else {
+    ctx.reply("You need to be a buyer to access this command.");
+  }
+
+  // if (users[userId] && users[userId].role === "seller") {
+  //   const groupId = users[userId].groupId;
+  //   ctx.reply(
+  //     `This is a special command only for sellers in group ${groupId}!`
+  //   );
+  // } else {
+  //   ctx.reply("You need to be a seller to access this command.");
+  // }
+
 });
 
 bot.command("start", (ctx) => {
