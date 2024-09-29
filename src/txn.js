@@ -66,7 +66,7 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey) {
 
         // Fetch UTXOs for the from address
         const utxos = await fetchUTXOs(fromAddress);
-        console.log({ utxos });
+        console.log();
 
         // Estimate fee rate and transaction size
         const feeRate = 10; // satoshis per byte (this can be adjusted)
@@ -127,6 +127,9 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey) {
         const tx = psbt.extractTransaction();
         const serializedTx = tx.toHex();
 
+        console.log({
+            tx
+        })
         // Broadcast the transaction
         const txid = await broadcastTransaction(serializedTx);
 
@@ -143,9 +146,9 @@ async function fetchUTXOs(address) {
     try {
         const apiUrl = `${network.explorer.apiUrl}/address/${address}/utxo`
         const response = await axios.get(apiUrl);
-        console.log(response.data)
+
         const utxos = await Promise.all(response.data.map(async utxo => {
-            console.log(utxo.txid)
+            console.log(`address: ${address}`,utxo.txid)
             const txResponse = await axios.get(`${network.explorer.apiUrl}/tx/${utxo.txid}`);
             return {
                 txid: utxo.txid,

@@ -79,7 +79,7 @@ bot.command("seller", async (ctx) => {
       );
     }
   } catch (err) {
-    console.log(err);
+    console.error(err);
 
   }
 });
@@ -162,7 +162,7 @@ bot.command("buyer", async (ctx) => {
       );
     }
   } catch (err) {
-    console.log(err);
+    console.error(err);
   }
 });
 
@@ -236,7 +236,6 @@ bot.command("release", async (ctx) => {
 });
 
 bot.command("start", (ctx) => {
-  console.log("check telegram now");
 
   const intromessage = `<b>🌟 GOLDESCROWBOT™ v.1</b>
    An Automated Telegram Escrow Service
@@ -298,7 +297,7 @@ try {
   setDefaultResultOrder("ipv4first");
   bot.launch();
 } catch (err) {
-  console.log(err);
+  console.error(err);
 }
 
 process.once("SIGINT", () => bot.stop("SIGINT"));

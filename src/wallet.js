@@ -61,7 +61,7 @@ async function createEscrowWallet(groupId) {
 
         return { message: "success" }
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return null;
     }
 }
