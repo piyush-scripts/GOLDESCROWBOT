@@ -172,4 +172,4 @@ async function broadcastTransaction(txHex) {
 
 
 
-module.exports = { transferBitcoin, getUTXOS, getBTCBalance };
+module.exports = { transferBitcoin, getBTCBalance };

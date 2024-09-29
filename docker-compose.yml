@@ -18,6 +18,7 @@ services:
       DB_PASSWORD: pass
       DATABASE_URL: postgresql://user:pass@postgres:5432/db
       MNEMONIC: "symbol beef post shuffle problem fox pear peace comic neck hurdle cute"
+      MASTER_KEY: Ym2Z0T20AkJ9ErEKXJWmczOKL16z15PahG+OIUfeZ9o=
     ports:
       - "3000:3000"
       - "5555:5555"  # Expose Prisma Studio port
