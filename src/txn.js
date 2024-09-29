@@ -1,8 +1,15 @@
 const bitcoin = require('bitcoinjs-lib');
 const axios = require('axios');
 const ecc = require('tiny-secp256k1');
+const dotenv = require('dotenv')
+const { getNetworkConfig, satoshisToBTC } = require('./config/btc')
+dotenv.config();
 
 bitcoin.initEccLib(ecc);
+
+const network = process.env.NODE_ENV === "development"
+            ? getNetworkConfig("testnet")
+            : getNetworkConfig("mainnet");
 
 // 0.00001 something
 const buyer_wallet = {
@@ -20,44 +27,35 @@ const escrow_wallet = {
     privateKey: "L54pB36434Zegb4PMCXsCgN1SwyXsJnntPfTkMtCAZqkNZF74xgp"
 }
 
-const amount = 0.00001; // 1000 satoshis
-
-
 /**
- * 
- * @param {string} fromAddress 
- * @param {*} utxos 
- * @returns {Promise<bigint>}
+ * @async
+ * @param {string} address address for checking the balance
+ * @returns {Promise<number> | null} balance in btc, null if api request fails
  */
-async function getUTXOS(fromAddress) {
-    const utxos = await fetchUTXOs(fromAddress, network);
+async function getBTCBalance(address) {
+    try {
+        const { data: utxos } = await axios.get(`${network.explorer.apiUrl}/address/${address}/utxo`);
 
-    // Estimate fee rate and transaction size
-    const feeRate = 10; // satoshis per byte (this can be adjusted)
-    const estimatedTxSize = 180; // estimated size of the transaction in bytes
-    const fee = BigInt(feeRate * estimatedTxSize); // total fee in satoshis
-
-    // Add inputs
-    let totalInput = BigInt(0);
-    for (const utxo of utxos) {
-        psbt.addInput({
-            hash: utxo.txid,
-            index: utxo.vout,
-            witnessUtxo: {
-                script: Buffer.from(utxo.scriptPubKey, 'hex'),
-                value: BigInt(utxo.value)
-            },
-        });
-        totalInput += BigInt(utxo.value);
-        if (totalInput >= satoshis + fee) {
-            break; // Stop adding inputs if we have enough
+        if (!utxos) {
+            throw new Error("Failed to get Balance of Address");
         }
+
+        let balance = 0;
+        for (const utxo of utxos) {
+            balance += utxo.value;
+        }
+
+        const ret_balance = satoshisToBTC(balance);
+
+        return ret_balance;
+    } catch (error) {
+        console.error(error);
+        return null;
     }
-    return totalInput;
 }
 
 /**
- * 
+ * @async
  * @param {string} fromAddress 
  * @param {string} toAddress 
  * @param {number} amount 
@@ -65,7 +63,7 @@ async function getUTXOS(fromAddress) {
  * @param {bitcoin.networks.Network} network 
  * @returns {Promise<string>}
  */
-async function transferBitcoin(fromAddress, toAddress, amount, privateKey, network) {
+async function transferBitcoin(fromAddress, toAddress, amount, privateKey) {
     try {
         // Convert amount to satoshis
         const satoshis = BigInt(Math.floor(amount * 100000000));
@@ -81,7 +79,7 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
         const psbt = new bitcoin.Psbt({ network });
 
         // Fetch UTXOs for the from address
-        const utxos = await fetchUTXOs(fromAddress, network);
+        const utxos = await fetchUTXOs(fromAddress);
         console.log({ utxos });
 
         // Estimate fee rate and transaction size
@@ -144,7 +142,7 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
         const serializedTx = tx.toHex();
 
         // Broadcast the transaction
-        const txid = await broadcastTransaction(serializedTx, network);
+        const txid = await broadcastTransaction(serializedTx);
 
         return txid;
 
@@ -155,17 +153,14 @@ async function transferBitcoin(fromAddress, toAddress, amount, privateKey, netwo
 }
 
 
-async function fetchUTXOs(address, network) {
+async function fetchUTXOs(address) {
     try {
-        const apiUrl = `https://blockstream.info/testnet/api/address/${address}/utxo`
-        console.log({
-            apiUrl
-        })
+        const apiUrl = `${network.explorer.apiUrl}/address/${address}/utxo`
         const response = await axios.get(apiUrl);
         console.log(response.data)
         const utxos = await Promise.all(response.data.map(async utxo => {
             console.log(utxo.txid)
-            const txResponse = await axios.get(`https://blockstream.info/testnet/api/tx/${utxo.txid}`);
+            const txResponse = await axios.get(`${network.explorer.apiUrl}/tx/${utxo.txid}`);
             return {
                 txid: utxo.txid,
                 vout: utxo.vout,
@@ -176,15 +171,16 @@ async function fetchUTXOs(address, network) {
         return utxos;
     } catch (error) {
         console.error({ error })
+        return null;
     }
 }
 
-async function broadcastTransaction(txHex, network) {
-    const apiUrl = `https://blockstream.info/testnet/api/tx`;
+async function broadcastTransaction(txHex) {
+    const apiUrl = `${network.explorer.apiUrl}/tx`;
     const response = await axios.post(apiUrl, txHex);
     return response.data; // Transaction ID
 }
 
 
 
-module.exports = { transferBitcoin, getUTXOS };
+module.exports = { transferBitcoin, getUTXOS, getBTCBalance };

@@ -1,13 +1,12 @@
 const { Telegraf } = require("telegraf");
-const pg = require("pg");
 const bitcoin = require("bitcoinjs-lib");
 const { setDefaultResultOrder } = require("node:dns");
 const dotenv = require("dotenv");
-const tinysecp = require("tiny-secp256k1");
-const { ECPairFactory } = require("ecpair");
 const db = require("./db");
 const { createEscrowWallet } = require("./wallet");
-const { transferBitcoin, getUTXOS } = require("./txn");
+const { transferBitcoin, getUTXOS, getBTCBalance } = require("./txn");
+const { isValidBTCAddress } = require('./config/btc');
+const { decryptPrivateKey } = require('./encrypt')
 
 dotenv.config();
 const network = process.env.NODE_ENV === "development" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
@@ -19,7 +18,7 @@ bot.command("seller", async (ctx) => {
     const message = ctx.message.text;
     const userId = ctx.from.id;
     const groupId = ctx.chat.id;
-    const btcAddress = message.split(" ")[1];
+    const btcAddress = message.split(" ")[1]?.trim();
 
     if (btcAddress && isValidBTCAddress(btcAddress)) {
       // const groupMetadata = await pool.query(
@@ -34,13 +33,11 @@ bot.command("seller", async (ctx) => {
           groupMetadata.buyer_user_id !== null &&
           parseInt(groupMetadata.buyer_user_id) === userId
         ) {
-          ctx.reply("Buyer can't run /seller command");
-          return;
+          return ctx.reply("Buyer can't run /seller command");
         }
 
         if (groupMetadata.seller_user_id !== null) {
-          ctx.reply("There already exists a seller in this group");
-          return;
+          return ctx.reply("There already exists a seller in this group");
         }
 
         // pool.query(
@@ -59,10 +56,6 @@ bot.command("seller", async (ctx) => {
         })
 
       } else {
-        // pool.query(
-        // "INSERT INTO users (group_id, seller_user_id, seller_btc_address) VALUES ($1, $2, $3)",
-        // [groupId, userId, btcAddress]
-        // );
         await db.user.create({
           data: {
             group_id: groupId,
@@ -75,7 +68,8 @@ bot.command("seller", async (ctx) => {
       const res = createEscrowWallet(groupId);
 
       if (res === null) {
-        ctx.reply("Please try again, failed to initialise Escrow Wallet.");
+        console.error(`Failed to create escrow wallet for group ${groupId}`);
+        return ctx.reply("Please try again, failed to initialise Escrow Wallet.");
       } else {
         ctx.reply("You are now a seller! Your role has been updated.");
       }
@@ -90,6 +84,34 @@ bot.command("seller", async (ctx) => {
   }
 });
 
+bot.command("balance", async (ctx) => {
+  try {
+    const groupId = ctx.chat.id;
+    const userId = ctx.from.id;
+
+    const group = await db.user.findFirst({
+      where: {
+        group_id: groupId,
+        OR: [{ buyer_user_id: userId }, { seller_user_id: userId }]
+      }
+    });
+
+    if (!group || !group.escrow_btc_address) {
+      return ctx.reply("No seller exists, escrow not initialised");
+    }
+
+    const balance = await getBTCBalance(group.escrow_btc_address);
+    if (balance === null) {
+      throw new Error("Error fetching balance");
+    }
+
+    ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance} BTC`);
+  } catch (error) {
+    console.error("Error in balance command:", error);
+    ctx.reply("An error occurred while fetching balance of escrow");
+  }
+});
+
 bot.command("buyer", async (ctx) => {
   try {
     const message = ctx.message.text;
@@ -98,10 +120,6 @@ bot.command("buyer", async (ctx) => {
     const btcAddress = message.split(" ")[1];
 
     if (btcAddress && isValidBTCAddress(btcAddress)) {
-      // const groupMetadata = await pool.query(
-      //   "SELECT buyer_user_id, seller_user_id FROM users WHERE group_id = $1",
-      //   [groupId]
-      // );
       const groupMetadata = await db.user.findFirst(groupId);
 
       if (groupMetadata !== null) {
@@ -118,11 +136,6 @@ bot.command("buyer", async (ctx) => {
           return;
         }
 
-        // pool.query(
-        //   "UPDATE users SET buyer_user_id = $1, buyer_btc_address = $2 WHERE group_id = $3",
-        //   [userId, btcAddress, groupId]
-        // );
-
         await db.user.update({
           where: {
             group_id: groupId
@@ -133,10 +146,6 @@ bot.command("buyer", async (ctx) => {
           }
         })
       } else {
-        // pool.query(
-        //   "INSERT INTO users (group_id, buyer_user_id, buyer_btc_address) VALUES ($1, $2, $3)",
-        //   [groupId, userId, btcAddress]
-        // );
         await db.user.create({
           data: {
             group_id: groupId,
@@ -157,91 +166,73 @@ bot.command("buyer", async (ctx) => {
   }
 });
 
-// Function to validate a BTC address
-function isValidBTCAddress(address) {
-  try {
-    bitcoin.address.toOutputScript(address);
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
 // Seller-only command
 bot.command("refund", async (ctx) => {
-  const userId = ctx.from.id;
-  const groupId = ctx.message.from.id;
-  // const sellerBtcAddress = await pool.query(
-  //   "SELECT seller_btc_address FROM users WHERE group_id=$1 AND seller_user_id=$2",
-  //   [groupId, userId]
-  // );
-  const group = await db.user.findFirst({
-    where: {
-      group_id: groupId,
-      seller_user_id: userId,
-    }
-  })
+  try {
+    const userId = ctx.from.id;
+    const groupId = ctx.chat.id;
 
-  if (userId === group.seller_user_id) {
+    const group = await db.user.findFirst({
+      where: {
+        group_id: groupId,
+        seller_user_id: userId,
+      }
+    });
+
+    if (!group || userId !== group.seller_user_id) {
+      return ctx.reply("You need to be a seller to access this command.");
+    }
+
     const fromAddress = group.escrow_btc_address;
-    const privateKey = group.escrow_private_key;
+    const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
     const toAddress = group.buyer_btc_address;
-    const amount = await getUTXOS(fromAddress);
+    const amount = await getBTCBalance(fromAddress);
 
-    const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
-
-    ctx.reply(`Refunded ${amount} to ${toAddress}\n txid: ${transfer}`)
-  } else {
-    ctx.reply("You need to be a seller to access this command.");
-  }
-
-  // if (users[userId] && users[userId].role === "seller") {
-  //   const groupId = users[userId].groupId;
-  //   ctx.reply(
-  //     `This is a special command only for sellers in group ${groupId}!`
-  //   );
-  // } else {
-  //   ctx.reply("You need to be a seller to access this command.");
-  // }
-
-});
-// Buyer-only command
-bot.command("release", async (ctx) => {
-  const userId = ctx.from.id;
-  const groupId = ctx.message.from.id;
-  // const sellerBtcAddress = await pool.query(
-  //   "SELECT seller_btc_address FROM users WHERE group_id=$1 AND seller_user_id=$2",
-  //   [groupId, userId]
-  // );
-  const group = await db.user.findFirst({
-    where: {
-      group_id: groupId,
-      buyer_user_id: userId,
+    if (amount <= 0) {
+      return ctx.reply("Insufficient balance to proceed.");
     }
-  })
-
-  if (userId === group.seller_user_id) {
-    const fromAddress = group.escrow_btc_address;
-    const privateKey = group.escrow_private_key;
-    const toAddress = group.seller_btc_address;
-    const amount = await getUTXOS(fromAddress);
 
     const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
 
-    ctx.reply(`Release ${amount} to ${toAddress}\n txid: ${transfer}`)
-  } else {
-    ctx.reply("You need to be a buyer to access this command.");
+    ctx.reply(`Refunded ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+  } catch (error) {
+    console.error("Error in refund command:", error);
+    ctx.reply("An error occurred while processing the refund. Please try again later.");
   }
+});
 
-  // if (users[userId] && users[userId].role === "seller") {
-  //   const groupId = users[userId].groupId;
-  //   ctx.reply(
-  //     `This is a special command only for sellers in group ${groupId}!`
-  //   );
-  // } else {
-  //   ctx.reply("You need to be a seller to access this command.");
-  // }
+bot.command("release", async (ctx) => {
+  try {
+    const userId = ctx.from.id;
+    const groupId = ctx.chat.id;
 
+    const group = await db.user.findFirst({
+      where: {
+        group_id: groupId,
+        buyer_user_id: userId,
+      }
+    });
+
+    if (!group || userId !== group.buyer_user_id) {
+      return ctx.reply("You need to be a buyer to access this command.");
+    }
+
+    const fromAddress = group.escrow_btc_address;
+    const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
+    const toAddress = group.seller_btc_address;
+    const amount = await getBTCBalance(fromAddress);
+
+    if (amount <= 0) {
+      return ctx.reply("Insufficient balance to proceed.");
+    }
+
+    const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
+
+    ctx.reply(`Released ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+  } catch (error) {
+    console.error("Error in release command:", error);
+    ctx.reply("An error occurred while processing the release. Please try again later.");
+  }
 });
 
 bot.command("start", (ctx) => {
@@ -266,6 +257,43 @@ bot.command("start", (ctx) => {
   ctx.reply(intromessage, { parse_mode: "HTML" });
 });
 
+bot.command("menu", (ctx) => {
+  const menuMessage = `
+  <b>🌟 GOLDESCROWBOT™ Menu</b>
+
+  Here are the available commands:
+
+  • /start - Introduction to the bot
+  • /what_is_escrow - Explanation of how escrow works
+  • /balance - Check the current escrow balance
+  • /release - Buyer releases funds to the seller
+  • /refund - Seller refunds the buyer
+  • /seller <BTC Address> - Set yourself as the seller with a BTC address
+  • /buyer <BTC Address> - Set yourself as the buyer with a BTC address
+
+  💡 Type any of the above commands for more details.`;
+
+  ctx.reply(menuMessage, { parse_mode: "HTML" });
+});
+
+bot.command("what_is_escrow", (ctx) => {
+  const escrowMessage = `
+  <b>🔍 What is Escrow?</b>
+
+  Escrow is a financial arrangement where a third party (this bot) holds and regulates payment of funds required for two parties involved in a transaction.
+
+  <b>How it works:</b>
+  • The buyer and seller agree on a deal.
+  • The buyer deposits funds into escrow.
+  • The seller delivers the product or service.
+  • Once the buyer is satisfied, they issue the /release command to transfer funds to the seller.
+  • If there's a dispute, the seller can issue the /refund command or an arbitrator can step in.
+
+  Escrow ensures both parties are protected during the transaction.`;
+
+  ctx.reply(escrowMessage, { parse_mode: "HTML" });
+});
+
 try {
   setDefaultResultOrder("ipv4first");
   bot.launch();
@@ -273,5 +301,5 @@ try {
   console.log(err);
 }
 
-process.once("SIGNIT", () => bot.stop("SIGNIT"));
+process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

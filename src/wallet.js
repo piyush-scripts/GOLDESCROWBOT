@@ -3,6 +3,8 @@ const bitcoin = require('bitcoinjs-lib');
 const ecc = require('tiny-secp256k1');
 const { BIP32Factory } = require('bip32');
 const dotenv = require("dotenv");
+const { encryptPrivateKey } = require('./encrypt');
+const db = require('./db');
 
 dotenv.config();
 
@@ -42,24 +44,22 @@ function generateEscrowWallet(mnemonic, idx) {
 async function createEscrowWallet(groupId) {
     const mnemonic = process.env.MNEMONIC
     try {
-        const db_len = (await db.user.findMany()).length;
+        const db_len = await db.user.count();
         const { address, privateKey } = generateEscrowWallet(mnemonic, db_len);
 
-        const users = await db.user.update({
+        const encryptedKey = encryptPrivateKey(privateKey);
+
+        await db.user.update({
             where: {
                 group_id: groupId
             },
             data: {
                 escrow_btc_address: address,
-                escrow_private_key: privateKey,
+                escrow_private_key: JSON.stringify(encryptedKey),
             }
         });
 
-        if (users) {
-            return { message: "success" }
-        } else {
-            throw new Error("Failed to update");
-        }
+        return { message: "success" }
     } catch (err) {
         console.log(err);
         return null;
