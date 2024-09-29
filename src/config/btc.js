@@ -38,7 +38,7 @@ const bitcoin = require('bitcoinjs-lib');
  * @property {NetworkObjects} testnet - Testnet configuration
  * @property {(networkType: 'mainnet' | 'testnet') => NetworkObjects} getNetworkConfig - Get the configuration for a specific network
  * @property {(satoshis: number) => number} satoshisToBTC - Convert satoshis to BTC
- * @property {(address: string) => boolean} isValidBTCAddress - Function to validate a BTC address
+ * @property {(address: string, network: bitcoin.networks.Network) => boolean} isValidBTCAddress - Function to validate a BTC address
  * @property {(btc: number) => number} BTCToSatoshis - Convert BTC to satoshis
  */
 
@@ -98,9 +98,9 @@ const BitcoinConfig = {
         return satoshis / this.SATOSHIS_PER_BTC;
     },
 
-    isValidBTCAddress(address) {
+    isValidBTCAddress(address, network) {
         try {
-            bitcoin.address.toOutputScript(address);
+            bitcoin.address.toOutputScript(address, network);
             return true;
         } catch (err) {
             return false;

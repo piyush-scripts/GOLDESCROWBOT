@@ -2,14 +2,14 @@ const bitcoin = require('bitcoinjs-lib');
 const axios = require('axios');
 const ecc = require('tiny-secp256k1');
 const dotenv = require('dotenv')
-const { getNetworkConfig, satoshisToBTC } = require('./config/btc')
+const BitcoinConfig = require('./config/btc')
 dotenv.config();
 
 bitcoin.initEccLib(ecc);
 
 const network = process.env.NODE_ENV === "development"
-            ? getNetworkConfig("testnet")
-            : getNetworkConfig("mainnet");
+            ? BitcoinConfig.getNetworkConfig('testnet')
+            : BitcoinConfig.getNetworkConfig('mainnet');
 
 // 0.00001 something
 
@@ -31,7 +31,7 @@ async function getBTCBalance(address) {
             balance += utxo.value;
         }
 
-        const ret_balance = satoshisToBTC(balance);
+        const ret_balance = BitcoinConfig.satoshisToBTC(balance);
 
         return ret_balance;
     } catch (error) {

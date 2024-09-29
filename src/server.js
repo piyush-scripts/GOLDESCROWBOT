@@ -20,7 +20,7 @@ bot.command("seller", async (ctx) => {
     const groupId = ctx.chat.id;
     const btcAddress = message.split(" ")[1]?.trim();
 
-    if (btcAddress && isValidBTCAddress(btcAddress)) {
+    if (btcAddress && isValidBTCAddress(btcAddress, network)) {
       // const groupMetadata = await pool.query(
       //   "SELECT seller_user_id, buyer_user_id FROM users WHERE group_id = $1",
       //   [groupId]
@@ -33,11 +33,13 @@ bot.command("seller", async (ctx) => {
           groupMetadata.buyer_user_id !== null &&
           parseInt(groupMetadata.buyer_user_id) === userId
         ) {
-          return ctx.reply("Buyer can't run /seller command");
+          await ctx.reply("Buyer can't run /seller command");
+          return
         }
 
         if (groupMetadata.seller_user_id !== null) {
-          return ctx.reply("There already exists a seller in this group");
+          await ctx.reply("There already exists a seller in this group");
+          return
         }
 
         // pool.query(
@@ -69,12 +71,15 @@ bot.command("seller", async (ctx) => {
 
       if (res === null) {
         console.error(`Failed to create escrow wallet for group ${groupId}`);
-        return ctx.reply("Please try again, failed to initialise Escrow Wallet.");
+        await ctx.reply("Please try again, failed to initialise Escrow Wallet.");
+        return
       } else {
-        ctx.reply("You are now a seller! Your role has been updated.");
+        await ctx.reply("You are now a seller! Your role has been updated.");
+
       }
     } else {
-      ctx.reply(
+      await ctx.reply(
+
         "Please provide a valid BTC address. Example: /seller <btc_address>"
       );
     }
@@ -97,7 +102,8 @@ bot.command("balance", async (ctx) => {
     });
 
     if (!group || !group.escrow_btc_address) {
-      return ctx.reply("No seller exists, escrow not initialised");
+      await ctx.reply("No seller exists, escrow not initialised");
+      return;
     }
 
     const balance = await getBTCBalance(group.escrow_btc_address);
@@ -105,10 +111,10 @@ bot.command("balance", async (ctx) => {
       throw new Error("Error fetching balance");
     }
 
-    ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance} BTC`);
+    await ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance} BTC`);
   } catch (error) {
     console.error("Error in balance command:", error);
-    ctx.reply("An error occurred while fetching balance of escrow");
+    await ctx.reply("An error occurred while fetching balance of escrow");
   }
 });
 
@@ -119,7 +125,7 @@ bot.command("buyer", async (ctx) => {
     const groupId = ctx.chat.id;
     const btcAddress = message.split(" ")[1];
 
-    if (btcAddress && isValidBTCAddress(btcAddress)) {
+    if (btcAddress && isValidBTCAddress(btcAddress, network)) {
       const groupMetadata = await db.user.findFirst(groupId);
 
       if (groupMetadata !== null) {
@@ -127,12 +133,14 @@ bot.command("buyer", async (ctx) => {
           groupMetadata.seller_user_id !== null &&
           parseInt(groupMetadata.seller_user_id) === userId
         ) {
-          ctx.reply("Seller can't run /buyer command");
+          await ctx.reply("Seller can't run /buyer command");
+
           return;
         }
 
         if (groupMetadata.buyer_user_id !== null) {
-          ctx.reply("There already exists a buyer in this group");
+          await ctx.reply("There already exists a buyer in this group");
+
           return;
         }
 
@@ -155,9 +163,11 @@ bot.command("buyer", async (ctx) => {
         })
       }
 
-      ctx.reply("You are now a buyer! Your role has been updated.");
+      await ctx.reply("You are now a buyer! Your role has been updated.");
+
     } else {
-      ctx.reply(
+      await ctx.reply(
+
         "Please provide a valid BTC address. Example: /buyer <btc_address>"
       );
     }
@@ -180,7 +190,8 @@ bot.command("refund", async (ctx) => {
     });
 
     if (!group || userId !== group.seller_user_id) {
-      return ctx.reply("You need to be a seller to access this command.");
+      await ctx.reply("You need to be a seller to access this command.");
+      return
     }
 
     const fromAddress = group.escrow_btc_address;
@@ -189,15 +200,18 @@ bot.command("refund", async (ctx) => {
     const amount = await getBTCBalance(fromAddress);
 
     if (amount <= 0) {
-      return ctx.reply("Insufficient balance to proceed.");
+      await ctx.reply("Insufficient balance to proceed.");
+      return
     }
 
     const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
 
-    ctx.reply(`Refunded ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+    await ctx.reply(`Refunded ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+
   } catch (error) {
     console.error("Error in refund command:", error);
-    ctx.reply("An error occurred while processing the refund. Please try again later.");
+    await ctx.reply("An error occurred while processing the refund. Please try again later.");
+
   }
 });
 
@@ -214,7 +228,8 @@ bot.command("release", async (ctx) => {
     });
 
     if (!group || userId !== group.buyer_user_id) {
-      return ctx.reply("You need to be a buyer to access this command.");
+      await ctx.reply("You need to be a buyer to access this command.");
+      return
     }
 
     const fromAddress = group.escrow_btc_address;
@@ -223,60 +238,80 @@ bot.command("release", async (ctx) => {
     const amount = await getBTCBalance(fromAddress);
 
     if (amount <= 0) {
-      return ctx.reply("Insufficient balance to proceed.");
+      await ctx.reply("Insufficient balance to proceed.");
+      return
     }
 
     const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
 
-    ctx.reply(`Released ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+    await ctx.reply(`Released ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+
   } catch (error) {
     console.error("Error in release command:", error);
-    ctx.reply("An error occurred while processing the release. Please try again later.");
+    await ctx.reply("An error occurred while processing the release. Please try again later.");
+
   }
 });
 
-bot.command("start", (ctx) => {
+bot.command("start", async (ctx) => {
+  try {
+    const intromessage = `<b>🌟 GOLDESCROWBOT™ v.1</b>
+      An Automated Telegram Escrow Service
+      
+      Welcome to <b>GOLDESCROWBOT™</b>. This bot provides a safe escrow service for your business on Telegram. Never get ripped off again; your funds are safe throughout your deals. If you have any issues, kindly type /contact, and an arbitrator will join the group chat within 24 hours.
+      
+      <b>💰 ESCROW FEE:</b>
+      5% if over $100
+      5$ if under $100
+      
+      <b>🔄 UPDATES - VOUCHES</b>
+      <b>✔️ DEALS DONE:</b> 1000+
+      <b>⚖️ DISPUTES HANDLED:</b> 150+
+      
+      💬 Declare the seller or buyer with /seller or /buyer [BTC/LTC ADDRESS] (Your BTC/LTC address = [BTC/LTC ADDRESS])
+     
+      💡 Type /menu to summon a menu with all bot features`;
 
-  const intromessage = `<b>🌟 GOLDESCROWBOT™ v.1</b>
-   An Automated Telegram Escrow Service
-   
-   Welcome to <b>GOLDESCROWBOT™</b>. This bot provides a safe escrow service for your business on Telegram. Never get ripped off again; your funds are safe throughout your deals. If you have any issues, kindly type /contact, and an arbitrator will join the group chat within 24 hours.
-   
-   <b>💰 ESCROW FEE:</b>
-   5% if over $100
-   5$ if under $100
-   
-   <b>🔄 UPDATES - VOUCHES</b>
-   <b>✔️ DEALS DONE:</b> 1000+
-   <b>⚖️ DISPUTES HANDLED:</b> 150+
-   
-   💬 Declare the seller or buyer with /seller or /buyer [BTC/LTC ADDRESS] (Your BTC/LTC address = [BTC/LTC ADDRESS])
-  
-   💡 Type /menu to summon a menu with all bot features`;
-  ctx.reply(intromessage, { parse_mode: "HTML" });
+    await ctx.reply(intromessage, { parse_mode: "HTML" });
+  } catch (error) {
+    if (error.response && error.response.error_code === 403) {
+      console.log(`Bot was blocked by user ${ctx.from.id}`);
+    } else {
+      console.error("Error sending start message:", error);
+    }
+  }
 });
 
-bot.command("menu", (ctx) => {
-  const menuMessage = `
-  <b>🌟 GOLDESCROWBOT™ Menu</b>
+bot.command("menu", async (ctx) => {
+  try {
+    const menuMessage = `<b>🌟 GOLDESCROWBOT™ Menu</b>
 
-  Here are the available commands:
+    Here are the available commands:
+    
+    • /start - Introduction to the bot
+    • /what_is_escrow - Explanation of how escrow works
+    • /balance - Check the current escrow balance
+    • /release - Buyer releases funds to the seller
+    • /refund - Seller refunds the buyer
+    • /seller &lt;BTC Address&gt; - Set yourself as the seller with a BTC address
+    • /buyer &lt;BTC Address&gt; - Set yourself as the buyer with a BTC address
+    
+    💡 Type any of the above commands for more details.`;
 
-  • /start - Introduction to the bot
-  • /what_is_escrow - Explanation of how escrow works
-  • /balance - Check the current escrow balance
-  • /release - Buyer releases funds to the seller
-  • /refund - Seller refunds the buyer
-  • /seller <BTC Address> - Set yourself as the seller with a BTC address
-  • /buyer <BTC Address> - Set yourself as the buyer with a BTC address
+    await ctx.reply(menuMessage, { parse_mode: "HTML" });
+  } catch (error) {
+    if (error.response && error.response.error_code === 403) {
+      console.log(`Bot was blocked by user ${ctx.from.id}`);
+    } else {
+      console.error("Error sending menu message:", error);
+    }
+  }
 
-  💡 Type any of the above commands for more details.`;
-
-  ctx.reply(menuMessage, { parse_mode: "HTML" });
 });
 
-bot.command("what_is_escrow", (ctx) => {
-  const escrowMessage = `
+bot.command("what_is_escrow", async (ctx) => {
+  try {
+    const escrowMessage = `
   <b>🔍 What is Escrow?</b>
 
   Escrow is a financial arrangement where a third party (this bot) holds and regulates payment of funds required for two parties involved in a transaction.
@@ -290,7 +325,15 @@ bot.command("what_is_escrow", (ctx) => {
 
   Escrow ensures both parties are protected during the transaction.`;
 
-  ctx.reply(escrowMessage, { parse_mode: "HTML" });
+    await ctx.reply(escrowMessage, { parse_mode: "HTML" });
+  } catch (error) {
+    if (error.response && error.response.error_code === 403) {
+      console.log(`Bot was blocked by user ${ctx.from.id}`);
+    } else {
+      console.error("Error sending what_is_escrow message:", error);
+    }
+  }
+
 });
 
 try {
