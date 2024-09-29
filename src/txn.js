@@ -12,20 +12,6 @@ const network = process.env.NODE_ENV === "development"
             : getNetworkConfig("mainnet");
 
 // 0.00001 something
-const buyer_wallet = {
-    addr: "tb1qzkrprzjxrl8weylt7hy7dx5qcgj3q0v33plwrj",
-    privateKey: "KzwpftN8nedURJjiS2foSLXz7tbcvTLourkJvkttraAUQLs2iGwU"
-}
-
-// 0.00000011 something
-const seller_wallet = {
-    addr: "tb1qkpwnfsnp30gv9cz0y8z2zsc74mal0y53fp4zwf",
-    privateKey: "L4nkq6TkvqDKNuN1WooAfUMzqy4mGurQfawJDcJX7QKpLPrctG6m"
-}
-const escrow_wallet = {
-    addr: "tb1qux5265kpeyys5n6pp8x254g5syg45h0yqmhdh3",
-    privateKey: "L54pB36434Zegb4PMCXsCgN1SwyXsJnntPfTkMtCAZqkNZF74xgp"
-}
 
 /**
  * @async
