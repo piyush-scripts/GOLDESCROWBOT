@@ -25,9 +25,9 @@
     "pg": "^8.13.0",
     "prisma": "^5.20.0",
     "telegraf": "^4.16.3",
-    "tiny-secp256k1": "^2.2.3"
+    "tiny-secp256k1": "^2.2.3",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "dotenv": "^16.4.5"
   }
 }
