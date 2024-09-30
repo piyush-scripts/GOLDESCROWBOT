@@ -378,8 +378,8 @@ bot.command("start", async (ctx) => {
       5$ if under $100
       
       <b>🔄 UPDATES - VOUCHES</b>
-      <b>✔️ DEALS DONE:</b> 1000+
-      <b>⚖️ DISPUTES HANDLED:</b> 150+
+      <b>✔️ DEALS DONE:</b> 8788
+      <b>⚖️ DISPUTES HANDLED:</b> 732
       
       💬 Declare the seller or buyer with /seller or /buyer [BTC/LTC ADDRESS] (Your BTC/LTC address = [BTC/LTC ADDRESS])
      
