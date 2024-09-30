@@ -1,4 +1,4 @@
-const { Telegraf } = require("telegraf");
+const { Telegraf, Markup } = require("telegraf");
 const bitcoin = require("bitcoinjs-lib");
 const { setDefaultResultOrder } = require("node:dns");
 const dotenv = require("dotenv");
@@ -18,7 +18,7 @@ bot.command("seller", async (ctx) => {
   try {
     const message = ctx.message.text;
     const userId = ctx.from.id;
-    const groupId = ctx.chat.id;
+    const groupId = Number(Math.abs(ctx.chat.id));
     const btcAddress = message.split(" ")[1]?.trim();
 
     if (btcAddress && isValidBTCAddress(btcAddress, network)) {
@@ -39,7 +39,7 @@ bot.command("seller", async (ctx) => {
           return
         }
 
-        await db.user.upsert({
+        await db.user.update({
           where: {
             group_id: groupId,
           },
@@ -50,6 +50,12 @@ bot.command("seller", async (ctx) => {
         })
 
       } else {
+        console.log({
+          groupId,
+          groupMetadata,
+          userId,
+          message
+        })
         await db.user.create({
           data: {
             group_id: groupId,
@@ -83,7 +89,7 @@ bot.command("seller", async (ctx) => {
 
 bot.command("balance", async (ctx) => {
   try {
-    const groupId = ctx.chat.id;
+    const groupId = Math.abs(ctx.chat.id);
     const userId = ctx.from.id;
 
     const group = await db.user.findFirst({
@@ -114,7 +120,7 @@ bot.command("buyer", async (ctx) => {
   try {
     const message = ctx.message.text;
     const userId = ctx.from.id;
-    const groupId = ctx.chat.id;
+    const groupId = Math.abs(ctx.chat.id);
     const btcAddress = message.split(" ")[1];
 
     if (btcAddress && isValidBTCAddress(btcAddress, network)) {
@@ -138,7 +144,7 @@ bot.command("buyer", async (ctx) => {
 
         await db.user.update({
           where: {
-            group_id: groupId
+            OR: [{id: groupId}, {group_id: groupId}]
           },
           data: {
             buyer_user_id: userId,
@@ -170,7 +176,7 @@ bot.command("buyer", async (ctx) => {
 bot.command("refund", async (ctx) => {
   try {
     const userId = ctx.from.id;
-    const groupId = ctx.chat.id;
+    const groupId = Math.abs(ctx.chat.id);
 
     const group = await db.user.findFirst({
       where: {
@@ -195,33 +201,23 @@ bot.command("refund", async (ctx) => {
       return;
     }
 
-    // Subtract fees from the balance to get the actual amount to transfer
-    const amountToTransfer = balance - fees;
-
-    if (amountToTransfer <= 0) {
+    if (balance <= fees) {
       await ctx.reply("Balance is insufficient to cover the transaction fees.");
       return;
     }
 
-    // Ask for confirmation before proceeding with the transfer
-    await ctx.reply(`Are you sure you want to refund ${amountToTransfer} BTC to ${toAddress}? (Reply with 'yes' or 'no')`);
+    const inlineKeyboard = Markup.inlineKeyboard([
+      Markup.button.callback('Yes', `refund_yes_${groupId}`),
+      Markup.button.callback('No', `refund_no_${groupId}`)
+    ]);
 
-    // Set up a listener for confirmation
-    bot.on('text', async (confirmationCtx) => {
-      if (confirmationCtx.from.id !== userId || confirmationCtx.chat.id !== groupId) {
-        return; // Ignore messages from other users or chats
-      }
-
-      if (confirmationCtx.text.toLowerCase() === 'yes') {
-        const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
-        await ctx.reply(`Refunded ${amountToTransfer} BTC to ${toAddress}\nTransaction ID: ${transfer}\nFees: ${fees} BTC`);
-      } else {
-        await ctx.reply("Refund cancelled.");
-      }
-
-      // Remove the listener after confirmation
-      bot.off('text');
-    });
+    await ctx.reply(
+      `Do you want to refund the following amount?\n\n` +
+      `Balance: ${balance.toFixed(8)} BTC\n` +
+      `Fees: ${fees.toFixed(8)} BTC\n` +
+      `To: ${toAddress}`,
+      inlineKeyboard
+    );
 
   } catch (error) {
     console.error("Error in refund command:", error);
@@ -232,7 +228,7 @@ bot.command("refund", async (ctx) => {
 bot.command("release", async (ctx) => {
   try {
     const userId = ctx.from.id;
-    const groupId = ctx.chat.id;
+    const groupId = Math.abs(ctx.chat.id);
 
     const group = await db.user.findFirst({
       where: {
@@ -257,28 +253,23 @@ bot.command("release", async (ctx) => {
       return;
     }
 
-    // Subtract fees from the balance to get the actual amount to transfer
-    const amountToTransfer = balance - fees;
+    if (balance <= fees) {
+      await ctx.reply("Balance is insufficient to cover the transaction fees.");
+      return;
+    }
 
-    // Ask for confirmation before proceeding with the transfer
-    await ctx.reply(`Are you sure you want to release ${amountToTransfer} BTC to ${toAddress}? (Reply with 'yes' or 'no')`);
+    const inlineKeyboard = Markup.inlineKeyboard([
+      Markup.button.callback('Yes', `release_yes_${groupId}`),
+      Markup.button.callback('No', `release_no_${groupId}`)
+    ]);
 
-    // Set up a listener for confirmation
-    bot.on('text', async (confirmationCtx) => {
-      if (confirmationCtx.from.id !== userId || confirmationCtx.chat.id !== groupId) {
-        return; // Ignore messages from other users or chats
-      }
-
-      if (confirmationCtx.text.toLowerCase() === 'yes') {
-        const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
-        await ctx.reply(`Released ${amountToTransfer} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
-      } else {
-        await ctx.reply("Release cancelled.");
-      }
-
-      // Remove the listener after confirmation
-      bot.off('text');
-    });
+    await ctx.reply(
+      `Do you want to release the following amount?\n\n` +
+      `Balance: ${balance.toFixed(8)} BTC\n` +
+      `Fees: ${fees.toFixed(8)} BTC\n` +
+      `To: ${toAddress}`,
+      inlineKeyboard
+    );
 
   } catch (error) {
     console.error("Error in release command:", error);
@@ -286,6 +277,94 @@ bot.command("release", async (ctx) => {
   }
 });
 
+// Handle callback queries
+bot.action(/^refund_(yes|no)_(\d+)$/, async (ctx) => {
+  const [action, response, groupId] = ctx.match;
+  const userId = ctx.from.id;
+
+  try {
+    const group = await db.user.findFirst({
+      where: {
+        group_id: Number(groupId),
+        seller_user_id: userId,
+      }
+    });
+
+    if (!group || userId !== Number(group.seller_user_id)) {
+      await ctx.answerCbQuery("You are not authorized to perform this action.");
+      return;
+    }
+
+    if (response === 'yes') {
+      const fromAddress = group.escrow_btc_address;
+      const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
+      const toAddress = group.buyer_btc_address;
+
+      const { balance, fees } = await getBTCBalance(fromAddress);
+      const amountToTransfer = balance - fees;
+
+      const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
+      await ctx.editMessageText(
+        `Refund completed:\n\n` +
+        `Amount: ${amountToTransfer.toFixed(8)} BTC\n` +
+        `To: ${toAddress}\n` +
+        `Transaction ID: ${transfer}\n` +
+        `Fees: ${fees.toFixed(8)} BTC`
+      );
+    } else {
+      await ctx.editMessageText("Refund cancelled.");
+    }
+
+    await ctx.answerCbQuery();
+  } catch (error) {
+    console.error("Error in refund action:", error);
+    await ctx.answerCbQuery("An error occurred. Please try again later.");
+  }
+});
+
+bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
+  const [action, response, groupId] = ctx.match;
+  const userId = ctx.from.id;
+
+  try {
+    const group = await db.user.findFirst({
+      where: {
+        group_id: Number(groupId),
+        buyer_user_id: userId,
+      }
+    });
+
+    if (!group || userId !== Number(group.buyer_user_id)) {
+      await ctx.answerCbQuery("You are not authorized to perform this action.");
+      return;
+    }
+
+    if (response === 'yes') {
+      const fromAddress = group.escrow_btc_address;
+      const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
+      const toAddress = group.seller_btc_address;
+
+      const { balance, fees } = await getBTCBalance(fromAddress);
+      const amountToTransfer = balance - fees;
+
+      const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
+      await ctx.editMessageText(
+        `Release completed:\n\n` +
+        `Amount: ${amountToTransfer.toFixed(8)} BTC\n` +
+        `To: ${toAddress}\n` +
+        `Transaction ID: ${transfer}\n` +
+        `Fees: ${fees.toFixed(8)} BTC`
+      );
+    } else {
+      await ctx.editMessageText("Release cancelled.");
+    }
+
+    await ctx.answerCbQuery();
+  } catch (error) {
+    console.error("Error in release action:", error);
+    await ctx.answerCbQuery("An error occurred. Please try again later.");
+  }
+});
 
 bot.command("start", async (ctx) => {
   try {
