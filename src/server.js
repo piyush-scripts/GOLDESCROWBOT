@@ -7,6 +7,7 @@ const { createEscrowWallet } = require("./wallet");
 const { transferBitcoin, getUTXOS, getBTCBalance } = require("./txn");
 const { isValidBTCAddress } = require('./config/btc');
 const { decryptPrivateKey } = require('./encrypt')
+const BitcoinConfig = require('./config/btc')
 
 dotenv.config();
 const network = process.env.NODE_ENV === "development" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
@@ -21,10 +22,6 @@ bot.command("seller", async (ctx) => {
     const btcAddress = message.split(" ")[1]?.trim();
 
     if (btcAddress && isValidBTCAddress(btcAddress, network)) {
-      // const groupMetadata = await pool.query(
-      //   "SELECT seller_user_id, buyer_user_id FROM users WHERE group_id = $1",
-      //   [groupId]
-      // );
 
       const groupMetadata = await db.user.findFirst(parseInt(groupId))
 
@@ -41,11 +38,6 @@ bot.command("seller", async (ctx) => {
           await ctx.reply("There already exists a seller in this group");
           return
         }
-
-        // pool.query(
-        // "UPDATE users SET seller_user_id = $1, seller_btc_address = $2 WHERE group_id = $3",
-        // [userId, btcAddress, groupId]
-        // );
 
         await db.user.upsert({
           where: {
@@ -111,7 +103,7 @@ bot.command("balance", async (ctx) => {
       throw new Error("Error fetching balance");
     }
 
-    await ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance} BTC`);
+    await ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance.balance} BTC, fees: ${balance.fees}`);
   } catch (error) {
     console.error("Error in balance command:", error);
     await ctx.reply("An error occurred while fetching balance of escrow");
@@ -175,8 +167,6 @@ bot.command("buyer", async (ctx) => {
     console.error(err);
   }
 });
-
-// Seller-only command
 bot.command("refund", async (ctx) => {
   try {
     const userId = ctx.from.id;
@@ -189,29 +179,53 @@ bot.command("refund", async (ctx) => {
       }
     });
 
-    if (!group || userId !== group.seller_user_id) {
+    if (!group || userId !== Number(group.seller_user_id)) {
       await ctx.reply("You need to be a seller to access this command.");
-      return
+      return;
     }
 
     const fromAddress = group.escrow_btc_address;
     const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
     const toAddress = group.buyer_btc_address;
-    const amount = await getBTCBalance(fromAddress);
 
-    if (amount <= 0) {
+    const { balance, fees } = await getBTCBalance(fromAddress);
+
+    if (balance <= 0) {
       await ctx.reply("Insufficient balance to proceed.");
-      return
+      return;
     }
 
-    const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
+    // Subtract fees from the balance to get the actual amount to transfer
+    const amountToTransfer = balance - fees;
 
-    await ctx.reply(`Refunded ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+    if (amountToTransfer <= 0) {
+      await ctx.reply("Balance is insufficient to cover the transaction fees.");
+      return;
+    }
+
+    // Ask for confirmation before proceeding with the transfer
+    await ctx.reply(`Are you sure you want to refund ${amountToTransfer} BTC to ${toAddress}? (Reply with 'yes' or 'no')`);
+
+    // Set up a listener for confirmation
+    bot.on('text', async (confirmationCtx) => {
+      if (confirmationCtx.from.id !== userId || confirmationCtx.chat.id !== groupId) {
+        return; // Ignore messages from other users or chats
+      }
+
+      if (confirmationCtx.text.toLowerCase() === 'yes') {
+        const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
+        await ctx.reply(`Refunded ${amountToTransfer} BTC to ${toAddress}\nTransaction ID: ${transfer}\nFees: ${fees} BTC`);
+      } else {
+        await ctx.reply("Refund cancelled.");
+      }
+
+      // Remove the listener after confirmation
+      bot.off('text');
+    });
 
   } catch (error) {
     console.error("Error in refund command:", error);
     await ctx.reply("An error occurred while processing the refund. Please try again later.");
-
   }
 });
 
@@ -227,31 +241,51 @@ bot.command("release", async (ctx) => {
       }
     });
 
-    if (!group || userId !== group.buyer_user_id) {
+    if (!group || userId !== Number(group.buyer_user_id)) {
       await ctx.reply("You need to be a buyer to access this command.");
-      return
+      return;
     }
 
     const fromAddress = group.escrow_btc_address;
     const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
     const toAddress = group.seller_btc_address;
-    const amount = await getBTCBalance(fromAddress);
 
-    if (amount <= 0) {
+    const { balance, fees } = await getBTCBalance(fromAddress);
+
+    if (balance <= 0) {
       await ctx.reply("Insufficient balance to proceed.");
-      return
+      return;
     }
 
-    const transfer = await transferBitcoin(fromAddress, toAddress, amount, privateKey, network);
+    // Subtract fees from the balance to get the actual amount to transfer
+    const amountToTransfer = balance - fees;
 
-    await ctx.reply(`Released ${amount} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+    // Ask for confirmation before proceeding with the transfer
+    await ctx.reply(`Are you sure you want to release ${amountToTransfer} BTC to ${toAddress}? (Reply with 'yes' or 'no')`);
+
+    // Set up a listener for confirmation
+    bot.on('text', async (confirmationCtx) => {
+      if (confirmationCtx.from.id !== userId || confirmationCtx.chat.id !== groupId) {
+        return; // Ignore messages from other users or chats
+      }
+
+      if (confirmationCtx.text.toLowerCase() === 'yes') {
+        const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
+        await ctx.reply(`Released ${amountToTransfer} BTC to ${toAddress}\nTransaction ID: ${transfer}`);
+      } else {
+        await ctx.reply("Release cancelled.");
+      }
+
+      // Remove the listener after confirmation
+      bot.off('text');
+    });
 
   } catch (error) {
     console.error("Error in release command:", error);
     await ctx.reply("An error occurred while processing the release. Please try again later.");
-
   }
 });
+
 
 bot.command("start", async (ctx) => {
   try {

@@ -11,8 +11,8 @@ dotenv.config();
 const bip32 = BIP32Factory(ecc);
 const network = process.env.NODE_ENV === "development" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
 
-// Define a specific derivation path
-const derivationPath = "m/44'/0'/0'/0/";
+// Define the correct derivation path for BIP84 (native SegWit)
+const derivationPath = "m/84'/0'/0'/0/";
 
 /**
  * Generate a wallet for a user (buyer, seller, or escrow)
@@ -25,6 +25,7 @@ function generateEscrowWallet(mnemonic, idx) {
     const root = bip32.fromSeed(seed, network);
     const child = root.derivePath(derivationPath + idx);
 
+    // Use p2wpkh for native SegWit addresses (BIP84)
     const { address } = bitcoin.payments.p2wpkh({
         pubkey: child.publicKey,
         network
@@ -39,10 +40,15 @@ function generateEscrowWallet(mnemonic, idx) {
 
 /**
  * @param {number} groupId
- * @returns {{message: string} | null>}
+ * @returns {Promise<{message: string} | null>}
  */
 async function createEscrowWallet(groupId) {
-    const mnemonic = process.env.MNEMONIC
+    const mnemonic = process.env.MNEMONIC;
+    if (!mnemonic) {
+        console.error("MNEMONIC is not set in the environment variables");
+        return null;
+    }
+
     try {
         const db_len = await db.user.count();
         const { address, privateKey } = generateEscrowWallet(mnemonic, db_len);
@@ -59,11 +65,11 @@ async function createEscrowWallet(groupId) {
             }
         });
 
-        return { message: "success" }
+        return { message: "success" };
     } catch (err) {
-        console.error(err);
+        console.error("Error creating escrow wallet:", err);
         return null;
     }
 }
 
-module.exports = { createEscrowWallet };
+module.exports = { createEscrowWallet, generateEscrowWallet };
