@@ -7,6 +7,10 @@ const { createEscrowWallet } = require("./wallet");
 const { transferBitcoin, getUTXOS, getBTCBalance } = require("./txn");
 const { decryptPrivateKey } = require('./encrypt')
 const BitcoinConfig = require('./config/btc')
+const express = require('express')
+
+const app = express();
+const PORT = process.env.PORT;
 
 dotenv.config();
 const network = process.env.NODE_ENV === "development" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
@@ -428,3 +432,11 @@ try {
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
+
+app.get('/healthz', (req, res)=> {
+  res.send('Bot is running!')
+})
+
+app.listen(PORT, ()=> {
+  console.log(`Bot is now running on PORT: ${PORT}`);
+})
