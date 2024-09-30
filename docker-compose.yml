@@ -28,7 +28,7 @@ services:
       - ./package.json:/usr/src/app/package.json
       - ./nodemon.json:/usr/src/app/nodemon.json
     command: >
-      sh -c "npx prisma migrate dev --name init && npx prisma generate && yarn dev"  # Run migrations before starting the app
+      sh -c "npx prisma migrate dev --name init && npx prisma generate && yarn start"  # Run migrations before starting the app
 
   postgres:
     image: postgres

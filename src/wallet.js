@@ -39,8 +39,16 @@ function generateEscrowWallet(mnemonic, idx) {
 }
 
 /**
+ * @typedef EscrowWallet
+ * @property { string } escrow_btc_address
+ * @property { string } escrow_private_key
+ */
+
+/**
+ * @async
  * @param {number} groupId
- * @returns {Promise<{message: string} | null>}
+ * @returns {Promise<EscrowWallet | null>}
+
  */
 async function createEscrowWallet(groupId) {
     const mnemonic = process.env.MNEMONIC;
@@ -55,17 +63,10 @@ async function createEscrowWallet(groupId) {
 
         const encryptedKey = encryptPrivateKey(privateKey);
 
-        await db.user.update({
-            where: {
-                group_id: groupId
-            },
-            data: {
-                escrow_btc_address: address,
-                escrow_private_key: JSON.stringify(encryptedKey),
-            }
-        });
-
-        return { message: "success" };
+        return {
+            escrow_btc_address: address,
+            escrow_private_key: JSON.stringify(encryptedKey)
+        };
     } catch (err) {
         console.error("Error creating escrow wallet:", err);
         return null;

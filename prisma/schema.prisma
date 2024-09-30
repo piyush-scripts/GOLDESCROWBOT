@@ -23,8 +23,7 @@ datasource db {
 //     escrow_private_key text);
 
 model User {
-  id Int @id @default(autoincrement())
-  group_id           BigInt
+  group_id           BigInt @id
   seller_user_id     BigInt?
   buyer_user_id      BigInt?
   seller_btc_address String?

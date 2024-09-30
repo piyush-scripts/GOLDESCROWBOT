@@ -5,7 +5,6 @@ const dotenv = require("dotenv");
 const db = require("./db");
 const { createEscrowWallet } = require("./wallet");
 const { transferBitcoin, getUTXOS, getBTCBalance } = require("./txn");
-const { isValidBTCAddress } = require('./config/btc');
 const { decryptPrivateKey } = require('./encrypt')
 const BitcoinConfig = require('./config/btc')
 
@@ -17,85 +16,118 @@ const bot = new Telegraf(process.env.GOLD_ESCROW_BOT_TOKEN);
 bot.command("seller", async (ctx) => {
   try {
     const message = ctx.message.text;
-    const userId = ctx.from.id;
-    const groupId = Number(Math.abs(ctx.chat.id));
-    const btcAddress = message.split(" ")[1]?.trim();
+    const groupId = Math.abs(ctx.chat.id);
+    const userId = BigInt(ctx.from.id);
+    const btcAddress = message.split(' ')[1]?.trim();
 
-    if (btcAddress && isValidBTCAddress(btcAddress, network)) {
-
-      const groupMetadata = await db.user.findFirst(parseInt(groupId))
-
-      if (groupMetadata !== null) {
-        if (
-          groupMetadata.buyer_user_id !== null &&
-          parseInt(groupMetadata.buyer_user_id) === userId
-        ) {
-          await ctx.reply("Buyer can't run /seller command");
-          return
+    if (btcAddress && BitcoinConfig.isValidBTCAddress(btcAddress, network)) {
+      const groupMetadata = await db.user.findFirst({
+        where: {
+          group_id: BigInt(groupId)
         }
+      });
 
+      if (!groupMetadata || !groupMetadata.group_id) {
+        try {
+          const escrow = await createEscrowWallet(groupId);
+          if (escrow === null) {
+            await ctx.reply(`Escrow wallet could not be generated`);
+            return;
+          }
+          const { escrow_btc_address, escrow_private_key } = escrow;
+          await db.$transaction([
+            db.user.create({
+              data: {
+                group_id: groupId,
+                seller_btc_address: btcAddress,
+                seller_user_id: userId,
+                buyer_btc_address: null,
+                buyer_user_id: null,
+                escrow_btc_address,
+                escrow_private_key
+              }
+            }),
+          ])
+
+          await ctx.reply(`Seller initialised with the btc address: (${btcAddress})\n To check escrow address, input /balance .`);
+        } catch (error) {
+          console.error(error);
+          await ctx.reply(`Please try again later, seller could not be declared.`);
+        }
+      } else {
         if (groupMetadata.seller_user_id !== null) {
-          await ctx.reply("There already exists a seller in this group");
-          return
+          await ctx.reply(`A seller with the btc address: (${groupMetadata.seller_btc_address}) already exists in group: (${groupMetadata.group_id})`)
         }
-
-        await db.user.update({
-          where: {
-            group_id: groupId,
-          },
-          create: {
-            seller_user_id: userId,
-            seller_btc_address: btcAddress,
-          }
-        })
-
-      } else {
-        console.log({
-          groupId,
-          groupMetadata,
-          userId,
-          message
-        })
-        await db.user.create({
-          data: {
-            group_id: groupId,
-            seller_user_id: userId,
-            seller_btc_address: btcAddress
-          }
-        })
-      }
-
-      const res = createEscrowWallet(groupId);
-
-      if (res === null) {
-        console.error(`Failed to create escrow wallet for group ${groupId}`);
-        await ctx.reply("Please try again, failed to initialise Escrow Wallet.");
-        return
-      } else {
-        await ctx.reply("You are now a seller! Your role has been updated.");
-
       }
     } else {
-      await ctx.reply(
-
-        "Please provide a valid BTC address. Example: /seller <btc_address>"
-      );
+      await ctx.reply(`Please provide a valid BTC address`);
     }
-  } catch (err) {
-    console.error(err);
 
+  } catch (error) {
+    console.error(error);
+    await ctx.reply(`Some error occurred seller not initialized`);
+  }
+});
+
+bot.command("buyer", async (ctx) => {
+  try {
+    const message = ctx.message.text;
+    const userId = BigInt(ctx.from.id);
+    const groupId = Math.abs(ctx.chat.id);
+    const btcAddress = message.split(' ')[1]?.trim();
+
+    if (btcAddress && BitcoinConfig.isValidBTCAddress(btcAddress, network)) {
+      const groupMetadata = await db.user.findFirst({
+        where: {
+          group_id: groupId
+        }
+      });
+      
+      if (groupMetadata === null || groupMetadata.group_id === null) {
+        await ctx.reply(`Currently there is no seller declared cannot proceed with declaring buyer`);
+        return;
+      }
+
+
+      if (groupMetadata.seller_btc_address === btcAddress) {
+        await ctx.reply(`You are using seller's BTC Address as your address, please provide your own address, userId: ${userId}`);
+        return;
+      }
+
+      if (groupMetadata.buyer_user_id !== null) {
+        await ctx.reply(`There already exists a buyer in this group: ${groupId}`);
+        return;
+      }
+
+      await db.user.update({
+        where: {
+          group_id: groupId,
+        },
+        data: {
+          buyer_btc_address: btcAddress,
+          buyer_user_id: userId
+        }
+      })
+
+      await ctx.reply(`Buyer initialised, with BTC Address: ${btcAddress}, to send BTC to escrow, type /balance .`);
+
+    } else {
+      await ctx.reply(`Please provide a valid BTC Address`)
+    }
+
+  } catch (error) {
+    console.error(error);
+    await ctx.reply(`Some error occurred, failed to initialise a buyer for the group: ${ctx.chat.id}`);
   }
 });
 
 bot.command("balance", async (ctx) => {
   try {
     const groupId = Math.abs(ctx.chat.id);
-    const userId = ctx.from.id;
 
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
-        OR: [{ buyer_user_id: userId }, { seller_user_id: userId }]
       }
     });
 
@@ -109,68 +141,10 @@ bot.command("balance", async (ctx) => {
       throw new Error("Error fetching balance");
     }
 
-    await ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance.balance} BTC, fees: ${balance.fees}`);
+    await ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance.balance} BTC,\n fees: ${balance.fees}`);
   } catch (error) {
     console.error("Error in balance command:", error);
     await ctx.reply("An error occurred while fetching balance of escrow");
-  }
-});
-
-bot.command("buyer", async (ctx) => {
-  try {
-    const message = ctx.message.text;
-    const userId = ctx.from.id;
-    const groupId = Math.abs(ctx.chat.id);
-    const btcAddress = message.split(" ")[1];
-
-    if (btcAddress && isValidBTCAddress(btcAddress, network)) {
-      const groupMetadata = await db.user.findFirst(groupId);
-
-      if (groupMetadata !== null) {
-        if (
-          groupMetadata.seller_user_id !== null &&
-          parseInt(groupMetadata.seller_user_id) === userId
-        ) {
-          await ctx.reply("Seller can't run /buyer command");
-
-          return;
-        }
-
-        if (groupMetadata.buyer_user_id !== null) {
-          await ctx.reply("There already exists a buyer in this group");
-
-          return;
-        }
-
-        await db.user.update({
-          where: {
-            OR: [{id: groupId}, {group_id: groupId}]
-          },
-          data: {
-            buyer_user_id: userId,
-            buyer_btc_address: btcAddress
-          }
-        })
-      } else {
-        await db.user.create({
-          data: {
-            group_id: groupId,
-            buyer_user_id: userId,
-            buyer_btc_address: btcAddress
-          }
-        })
-      }
-
-      await ctx.reply("You are now a buyer! Your role has been updated.");
-
-    } else {
-      await ctx.reply(
-
-        "Please provide a valid BTC address. Example: /buyer <btc_address>"
-      );
-    }
-  } catch (err) {
-    console.error(err);
   }
 });
 bot.command("refund", async (ctx) => {
@@ -233,7 +207,6 @@ bot.command("release", async (ctx) => {
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
-        buyer_user_id: userId,
       }
     });
 
@@ -243,7 +216,6 @@ bot.command("release", async (ctx) => {
     }
 
     const fromAddress = group.escrow_btc_address;
-    const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
     const toAddress = group.seller_btc_address;
 
     const { balance, fees } = await getBTCBalance(fromAddress);
@@ -286,7 +258,6 @@ bot.action(/^refund_(yes|no)_(\d+)$/, async (ctx) => {
     const group = await db.user.findFirst({
       where: {
         group_id: Number(groupId),
-        seller_user_id: userId,
       }
     });
 
@@ -301,15 +272,15 @@ bot.action(/^refund_(yes|no)_(\d+)$/, async (ctx) => {
       const toAddress = group.buyer_btc_address;
 
       const { balance, fees } = await getBTCBalance(fromAddress);
-      const amountToTransfer = balance - fees;
+      const amountToTransfer = BitcoinConfig.BTCToSatoshis(balance) - BitcoinConfig.BTCToSatoshis(fees);
 
-      const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
+      const transfer = await transferBitcoin(fromAddress, toAddress, BitcoinConfig.satoshisToBTC(amountToTransfer), privateKey);
       await ctx.editMessageText(
         `Refund completed:\n\n` +
-        `Amount: ${amountToTransfer.toFixed(8)} BTC\n` +
+        `Amount: ${amountToTransfer} BTC\n` +
         `To: ${toAddress}\n` +
         `Transaction ID: ${transfer}\n` +
-        `Fees: ${fees.toFixed(8)} BTC`
+        `Fees: ${fees} BTC`
       );
     } else {
       await ctx.editMessageText("Refund cancelled.");
@@ -330,7 +301,6 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
     const group = await db.user.findFirst({
       where: {
         group_id: Number(groupId),
-        buyer_user_id: userId,
       }
     });
 
