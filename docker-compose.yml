@@ -10,7 +10,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      GOLD_ESCROW_BOT_TOKEN: 7421155089:AAFopZwebdcVvgQcnMDW2tGJA226jRRAUw0
+      GOLD_ESCROW_BOT_TOKEN: 7832141748:AAHjN2gPEI2PrU5v1LzMS01lQHeHKEg34-g
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: db
