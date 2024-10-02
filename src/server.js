@@ -17,6 +17,61 @@ const network = process.env.NODE_ENV === "development" ? bitcoin.networks.testne
 
 const bot = new Telegraf(process.env.GOLD_ESCROW_BOT_TOKEN);
 
+
+const commands = [
+  { command: 'start', description: 'Starts the bot' },
+  { command: 'menu', description: 'Shows all the commands in a text message' },
+  { command: 'what_is_escrow', description: 'Explains exactly how escrow works' },
+  { command: 'seller', description: 'Makes you the seller in this group' },
+  { command: 'buyer', description: ' Makes you the buyer in this group' },
+  { command: 'release', description: 'Sends the money from escrow to seller' },
+  { command: 'refund', description: 'Sends the money from escrow to buyer, if the deal fails' },
+  { command: 'balance', description: 'To check that buyer has sent money to the escrow or not' },
+  { command: 'contact', description: 'If any dispute occurs between seller and buyer then our executive will handle the issue' },
+  // Add more commands as needed
+];
+
+// Set the commands for your bot
+bot.telegram.setMyCommands(commands);
+
+
+bot.command("contact", async (ctx)=>{
+
+
+
+
+});
+
+
+
+
+bot.command("menu", async (ctx) => {
+  try {
+    const menuMessage = `<b>Escrow Bot Commands</b><br><br>
+• <code>/start</code> - Introduction to the bot<br><br>
+• <code>/what_is_escrow</code> - Explanation of how escrow works<br><br>
+• <code>/balance</code> - Check the current escrow balance<br><br>
+• <code>/release</code> - Buyer releases funds to the seller<br><br>
+• <code>/refund</code> - Seller refunds the buyer<br><br>
+• <code>/contact</code> - If any dispute occurs between seller and buyer then our executive will handle the issue<br><br>
+• <code>/seller &lt;BTC Address&gt;</code> - Set yourself as the seller with a BTC address<br><br>
+• <code>/buyer &lt;BTC Address&gt;</code> - Set yourself as the buyer with a BTC address`;
+
+    await ctx.reply(menuMessage, { parse_mode: "HTML" });
+  } catch (error) {
+    if (error.response && error.response.error_code === 403) {
+      console.log(`Bot was blocked by user ${ctx.from.id}`);
+    } else {
+      console.error("Error sending menu message:", error);
+    }
+  }
+
+});
+
+
+
+
+
 bot.command("seller", async (ctx) => {
   try {
     const message = ctx.message.text;
@@ -348,8 +403,7 @@ bot.command("start", async (ctx) => {
       Welcome to <b>GOLDESCROWBOT™</b>. This bot provides a safe escrow service for your business on Telegram. Never get ripped off again; your funds are safe throughout your deals. If you have any issues, kindly type /contact, and an arbitrator will join the group chat within 24 hours.
       
       <b>💰 ESCROW FEE:</b>
-      5% if over $100
-      5$ if under $100
+      =>  minimal Chain FEE (<5% always)
       
       <b>🔄 UPDATES - VOUCHES</b>
       <b>✔️ DEALS DONE:</b> 8788
@@ -369,32 +423,7 @@ bot.command("start", async (ctx) => {
   }
 });
 
-bot.command("menu", async (ctx) => {
-  try {
-    const menuMessage = `<b>🌟 GOLDESCROWBOT™ Menu</b>
 
-    Here are the available commands:
-    
-    • /start - Introduction to the bot
-    • /what_is_escrow - Explanation of how escrow works
-    • /balance - Check the current escrow balance
-    • /release - Buyer releases funds to the seller
-    • /refund - Seller refunds the buyer
-    • /seller &lt;BTC Address&gt; - Set yourself as the seller with a BTC address
-    • /buyer &lt;BTC Address&gt; - Set yourself as the buyer with a BTC address
-    
-    💡 Type any of the above commands for more details.`;
-
-    await ctx.reply(menuMessage, { parse_mode: "HTML" });
-  } catch (error) {
-    if (error.response && error.response.error_code === 403) {
-      console.log(`Bot was blocked by user ${ctx.from.id}`);
-    } else {
-      console.error("Error sending menu message:", error);
-    }
-  }
-
-});
 
 bot.command("what_is_escrow", async (ctx) => {
   try {

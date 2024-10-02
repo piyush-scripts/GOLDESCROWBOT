@@ -28,6 +28,5 @@
     "prisma": "^5.20.0",
     "telegraf": "^4.16.3",
     "tiny-secp256k1": "^2.2.3"
-  },
-  "devDependencies": {}
+  }
 }
