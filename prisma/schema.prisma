@@ -30,4 +30,5 @@ model User {
   buyer_btc_address  String?
   escrow_btc_address String?
   escrow_private_key String?
+  admin_user_id      BigInt?
 }

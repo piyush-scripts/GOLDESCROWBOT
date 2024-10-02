@@ -36,6 +36,15 @@ bot.telegram.setMyCommands(commands);
 
 
 bot.command("contact", async (ctx)=>{
+try{
+  //add logic here
+  const admin_user_id = 362795;
+  const admin_user_name = "rand_user_name";
+  await ctx.reply("Add this ${admin_user_id} to your group")
+}
+catch (err){
+  console.error(err);
+}
 
 
 
@@ -47,17 +56,31 @@ bot.command("contact", async (ctx)=>{
 
 bot.command("menu", async (ctx) => {
   try {
-    const menuMessage = `<b>Escrow Bot Commands</b><br><br>
-• <code>/start</code> - Introduction to the bot<br><br>
-• <code>/what_is_escrow</code> - Explanation of how escrow works<br><br>
-• <code>/balance</code> - Check the current escrow balance<br><br>
-• <code>/release</code> - Buyer releases funds to the seller<br><br>
-• <code>/refund</code> - Seller refunds the buyer<br><br>
-• <code>/contact</code> - If any dispute occurs between seller and buyer then our executive will handle the issue<br><br>
-• <code>/seller &lt;BTC Address&gt;</code> - Set yourself as the seller with a BTC address<br><br>
-• <code>/buyer &lt;BTC Address&gt;</code> - Set yourself as the buyer with a BTC address`;
+    const menuMessage = `# 🤖 Escrow Bot Commands
 
-    await ctx.reply(menuMessage, { parse_mode: "HTML" });
+Here's a list of all available commands to help you use our Escrow Bot:
+
+📌 /start - Get introduced to the bot
+
+💡 /what_is_escrow - Learn how escrow works
+
+💰 /balance - Check your current escrow balance
+
+✅ /release - Buyer releases funds to the seller
+
+🔄 /refund - Seller refunds the buyer
+
+🆘 /contact - Get help from our team for disputes
+
+👨‍💼 /seller <BTC Address> - Set yourself as the seller
+
+🛒 /buyer <BTC Address> - Set yourself as the buyer
+
+Remember to replace <BTC Address> with your actual Bitcoin address when using the /seller or /buyer commands.
+
+Need help? Don't hesitate to use the /contact command!`;
+
+    await ctx.reply(menuMessage);
   } catch (error) {
     if (error.response && error.response.error_code === 403) {
       console.log(`Bot was blocked by user ${ctx.from.id}`);
@@ -97,6 +120,8 @@ bot.command("seller", async (ctx) => {
           await db.$transaction([
             db.user.create({
               data: {
+                //edit
+                admin_user_id:5261937,
                 group_id: groupId,
                 seller_btc_address: btcAddress,
                 seller_user_id: userId,
@@ -210,7 +235,7 @@ bot.command("refund", async (ctx) => {
   try {
     const userId = ctx.from.id;
     const groupId = Math.abs(ctx.chat.id);
-
+    
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
@@ -403,7 +428,7 @@ bot.command("start", async (ctx) => {
       Welcome to <b>GOLDESCROWBOT™</b>. This bot provides a safe escrow service for your business on Telegram. Never get ripped off again; your funds are safe throughout your deals. If you have any issues, kindly type /contact, and an arbitrator will join the group chat within 24 hours.
       
       <b>💰 ESCROW FEE:</b>
-      =>  minimal Chain FEE (<5% always)
+      =>  minimal Chain FEE
       
       <b>🔄 UPDATES - VOUCHES</b>
       <b>✔️ DEALS DONE:</b> 8788
@@ -421,6 +446,132 @@ bot.command("start", async (ctx) => {
       console.error("Error sending start message:", error);
     }
   }
+});
+
+
+bot.command("admin_refund", async (ctx) => {
+  try {
+    const AdminUserId = ctx.from.id;
+    const groupId = Math.abs(ctx.chat.id);
+    
+    const group = await db.user.findFirst({
+      where: {
+        group_id: groupId,
+        admin_user_id: AdminUserId,
+      }
+    });
+    
+    if (!group || AdminUserId !== Number(group.admin_user_id)) {
+      await ctx.reply("You need to be an Admin to access this command.");
+      return;
+    }
+    
+    const fromAddress = group.escrow_btc_address;
+    const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
+    const toAddress = group.buyer_btc_address;
+    
+    const { balance, fees } = await getBTCBalance(fromAddress);
+    
+    if (balance <= 0) {
+      await ctx.reply("Insufficient balance to proceed.");
+      return;
+    }
+    
+    if (balance <= fees) {
+      await ctx.reply("Balance is insufficient to cover the transaction fees.");
+      return;
+    }
+    
+    const inlineKeyboard = Markup.inlineKeyboard([
+      Markup.button.callback('Yes', `refund_yes_${groupId}`),
+      Markup.button.callback('No', `refund_no_${groupId}`)
+    ]);
+    
+    await ctx.reply(
+      `Do you want to refund the following amount?\n\n` +
+      `Balance: ${balance.toFixed(8)} BTC\n` +
+      `Fees: ${fees.toFixed(8)} BTC\n` +
+      `To: ${toAddress}`,
+      inlineKeyboard
+    );
+  } catch (error) {
+    console.error("Error in refund command:", error);
+    await ctx.reply("An error occurred while processing the refund. Please try again later.");
+  }
+});
+
+bot.command("admin_release", async (ctx) => {
+  try {
+    const AdminUserId = ctx.from.id;
+    const groupId = Math.abs(ctx.chat.id);
+    
+    const group = await db.user.findFirst({
+      where: {
+        group_id: groupId,
+      }
+    });
+    
+    if (!group || AdminUserId !== Number(group.admin_user_id)) {
+      await ctx.reply("You need to be an admin to access this command.");
+      return;
+    }
+    
+    const fromAddress = group.escrow_btc_address;
+    const toAddress = group.seller_btc_address;
+    
+    const { balance, fees } = await getBTCBalance(fromAddress);
+    
+    if (balance <= 0) {
+      await ctx.reply("Insufficient balance to proceed.");
+      return;
+    }
+    
+    if (balance <= fees) {
+      await ctx.reply("Balance is insufficient to cover the transaction fees.");
+      return;
+    }
+    
+    const inlineKeyboard = Markup.inlineKeyboard([
+      Markup.button.callback('Yes', `release_yes_${groupId}`),
+      Markup.button.callback('No', `release_no_${groupId}`)
+    ]);
+    
+    await ctx.reply(
+      `Do you want to release the following amount?\n\n` +
+      `Balance: ${balance.toFixed(8)} BTC\n` +
+      `Fees: ${fees.toFixed(8)} BTC\n` +
+      `To: ${toAddress}`,
+      inlineKeyboard
+    );
+  } catch (error) {
+    console.error("Error in release command:", error);
+    await ctx.reply("An error occurred while processing the release. Please try again later.");
+  }
+});
+
+// Action handlers for inline keyboard buttons
+bot.action(/^refund_yes_(\d+)$/, async (ctx) => {
+  const groupId = ctx.match[1];
+  // Implement the refund logic here
+  await ctx.answerCbQuery();
+  await ctx.editMessageText('Refund process initiated. Please wait for confirmation.');
+});
+
+bot.action(/^refund_no_(\d+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.editMessageText('Refund cancelled.');
+});
+
+bot.action(/^release_yes_(\d+)$/, async (ctx) => {
+  const groupId = ctx.match[1];
+  // Implement the release logic here
+  await ctx.answerCbQuery();
+  await ctx.editMessageText('Release process initiated. Please wait for confirmation.');
+});
+
+bot.action(/^release_no_(\d+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.editMessageText('Release cancelled.');
 });
 
 
