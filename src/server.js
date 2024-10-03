@@ -43,7 +43,7 @@ try{
   
   await ctx.reply(`📢 Add our team assistant to your conversation:
 
-👤 Username: ${admin_user_name}
+👤 Username: ${admin_user_id}
 
 ✅ Please add this user to your group for assistance.`)
 }
