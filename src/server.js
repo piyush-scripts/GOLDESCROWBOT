@@ -126,7 +126,7 @@ bot.command("seller", async (ctx) => {
             db.user.create({
               data: {
                 //edit
-                admin_user_id:process.env(ADMIN_USER_ID),
+                admin_user_id:process.env.ADMIN_USER_ID,
                 group_id: groupId,
                 seller_btc_address: btcAddress,
                 seller_user_id: userId,
