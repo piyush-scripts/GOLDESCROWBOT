@@ -40,7 +40,7 @@ bot.command("contact", async (ctx)=>{
 try{
   //add logic here
   const admin_user_id = process.env(ADMIN_USER_ID);
-  const admin_user_name = process.env(ADMIN_USER_NAME);
+  
   await ctx.reply(`📢 Add our team assistant to your conversation:
 
 👤 Username: ${admin_user_name}
