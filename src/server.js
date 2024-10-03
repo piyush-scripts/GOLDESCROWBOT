@@ -631,11 +631,15 @@ bot.command("what_is_escrow", async (ctx) => {
 💼 Escrow is a financial arrangement where a third party (this bot) holds and regulates payment of funds required for two parties involved in a transaction.
 
   <b>How it works:</b>
-  • The buyer and seller agree on a deal.
-  • The buyer deposits funds into escrow.
-  • The seller delivers the product or service.
-  • Once the buyer is satisfied, they issue the /release command to transfer funds to the seller.
-  • If there's a dispute, the seller can issue the /refund command or an arbitrator can step in.
+  •🤝 The buyer and seller agree on a deal.
+
+  •💵 The buyer deposits funds into escrow.
+
+  •📦 The seller delivers the product or service.
+
+  •✅ Once the buyer is satisfied, they issue the /release command to transfer funds to the seller.
+
+  •⚖️ If there's a dispute, the seller can issue the /refund command or an arbitrator can step in.
 
 <i>🛡️ Escrow ensures both parties are protected during the transaction.</i>`;
 
