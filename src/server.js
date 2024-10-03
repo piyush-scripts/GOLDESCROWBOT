@@ -39,7 +39,7 @@ bot.telegram.setMyCommands(commands);
 bot.command("contact", async (ctx)=>{
 try{
   //add logic here
-  const admin_user_id = process.env(ADMIN_USER_ID);
+  const admin_user_id = process.env.ADMIN_USER_ID;
   
   await ctx.reply(`📢 Add our team assistant to your conversation:
 
