@@ -7,7 +7,8 @@ const { createEscrowWallet } = require("./wallet");
 const { transferBitcoin, getUTXOS, getBTCBalance } = require("./txn");
 const { decryptPrivateKey } = require('./encrypt')
 const BitcoinConfig = require('./config/btc')
-const express = require('express')
+const express = require('express');
+const { parse } = require("node:path");
 
 const app = express();
 const PORT = process.env.PORT;
@@ -38,9 +39,13 @@ bot.telegram.setMyCommands(commands);
 bot.command("contact", async (ctx)=>{
 try{
   //add logic here
-  const admin_user_id = 362795;
-  const admin_user_name = "rand_user_name";
-  await ctx.reply("Add this ${admin_user_id} to your group")
+  const admin_user_id = process.env(ADMIN_USER_ID);
+  const admin_user_name = process.env(ADMIN_USER_NAME);
+  await ctx.reply(`📢 Add our team assistant to your conversation:
+
+👤 Username: ${admin_user_name}
+
+✅ Please add this user to your group for assistance.`)
 }
 catch (err){
   console.error(err);
@@ -121,7 +126,7 @@ bot.command("seller", async (ctx) => {
             db.user.create({
               data: {
                 //edit
-                admin_user_id:5261937,
+                admin_user_id:process.env(ADMIN_USER_ID),
                 group_id: groupId,
                 seller_btc_address: btcAddress,
                 seller_user_id: userId,
@@ -133,18 +138,31 @@ bot.command("seller", async (ctx) => {
             }),
           ])
 
-          await ctx.reply(`Seller initialised with the btc address: (${btcAddress})\n To check escrow address, input /balance .`);
+          await ctx.reply(`✅ Seller initialized successfully!
+
+💼 BTC Address: ${btcAddress}
+
+💡 To check escrow address, type: /balance`);
         } catch (error) {
           console.error(error);
           await ctx.reply(`Please try again later, seller could not be declared.`);
         }
       } else {
         if (groupMetadata.seller_user_id !== null) {
-          await ctx.reply(`A seller with the btc address: (${groupMetadata.seller_btc_address}) already exists in group: (${groupMetadata.group_id})`)
+          await ctx.reply(`⚠️ Seller Already Exists
+
+🔒 BTC Address: ${groupMetadata.seller_btc_address}
+🌐 Group ID: ${groupMetadata.group_id}
+
+❗️ You cannot add another seller to this group.`)
         }
       }
     } else {
-      await ctx.reply(`Please provide a valid BTC address`);
+      await ctx.reply(`❗️ Invalid Input
+
+📌 Please provide a valid BTC address
+
+🔢 Example: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2`);
     }
 
   } catch (error) {
@@ -168,18 +186,30 @@ bot.command("buyer", async (ctx) => {
       });
       
       if (groupMetadata === null || groupMetadata.group_id === null) {
-        await ctx.reply(`Currently there is no seller declared cannot proceed with declaring buyer`);
+        await ctx.reply(`❌ Action Not Possible
+
+🚫 No seller has been declared yet.
+
+⚠️ Cannot proceed with declaring a buyer.
+
+💡 Tip: Use /seller [BTC ADDRESS] to declare a seller first.`);
         return;
       }
 
 
       if (groupMetadata.seller_btc_address === btcAddress) {
-        await ctx.reply(`You are using seller's BTC Address as your address, please provide your own address, userId: ${userId}`);
+        await ctx.reply(`🚫 Oops! It looks like you're trying to use the seller's BTC address as your own. Please provide **your** BTC address instead. 😊
+
+🔑 User ID: ${userId}
+`);
         return;
       }
 
       if (groupMetadata.buyer_user_id !== null) {
-        await ctx.reply(`There already exists a buyer in this group: ${groupId}`);
+        await ctx.reply(`⚠️ There is already a buyer in this group! 
+
+🆔 Group ID:${groupId}
+`);
         return;
       }
 
@@ -193,15 +223,20 @@ bot.command("buyer", async (ctx) => {
         }
       })
 
-      await ctx.reply(`Buyer initialised, with BTC Address: ${btcAddress}, to send BTC to escrow, type /balance .`);
+      await ctx.reply(`🛒 Buyer initialized with BTC Address: ${btcAddress}
+
+💰 To send BTC to escrow, type **/balance**.
+`);
 
     } else {
-      await ctx.reply(`Please provide a valid BTC Address`)
+      await ctx.reply(`🚫 Please provide a valid BTC address. 🪙
+`)
     }
 
   } catch (error) {
     console.error(error);
-    await ctx.reply(`Some error occurred, failed to initialise a buyer for the group: ${ctx.chat.id}`);
+    await ctx.reply(`❌ An error occurred. Failed to initialize a buyer for the group: ${ctx.chat.id}. 
+`);
   }
 });
 
@@ -216,7 +251,8 @@ bot.command("balance", async (ctx) => {
     });
 
     if (!group || !group.escrow_btc_address) {
-      await ctx.reply("No seller exists, escrow not initialised");
+      await ctx.reply(`⚠️ No seller exists, so escrow has not been initialized. 
+`);
       return;
     }
 
@@ -225,7 +261,10 @@ bot.command("balance", async (ctx) => {
       throw new Error("Error fetching balance");
     }
 
-    await ctx.reply(`Balance of current escrow (${group.escrow_btc_address}): ${balance.balance} BTC,\n fees: ${balance.fees}`);
+    await ctx.reply(`💼 Balance of current escrow (${group.escrow_btc_address}): **${balance.balance} BTC**
+
+💸 Fees: **${balance.fees} BTC**
+`);
   } catch (error) {
     console.error("Error in balance command:", error);
     await ctx.reply("An error occurred while fetching balance of escrow");
@@ -244,7 +283,8 @@ bot.command("refund", async (ctx) => {
     });
 
     if (!group || userId !== Number(group.seller_user_id)) {
-      await ctx.reply("You need to be a seller to access this command.");
+      await ctx.reply(`🚫 You need to be a seller to access this command.
+`);
       return;
     }
 
@@ -260,7 +300,8 @@ bot.command("refund", async (ctx) => {
     }
 
     if (balance <= fees) {
-      await ctx.reply("Balance is insufficient to cover the transaction fees.");
+      await ctx.reply(`⚠️ Balance is insufficient to cover the transaction fees.
+`);
       return;
     }
 
@@ -279,7 +320,8 @@ bot.command("refund", async (ctx) => {
 
   } catch (error) {
     console.error("Error in refund command:", error);
-    await ctx.reply("An error occurred while processing the refund. Please try again later.");
+    await ctx.reply(`❌ An error occurred while processing the refund. Please try again later.
+`);
   }
 });
 
@@ -295,7 +337,8 @@ bot.command("release", async (ctx) => {
     });
 
     if (!group || userId !== Number(group.buyer_user_id)) {
-      await ctx.reply("You need to be a buyer to access this command.");
+      await ctx.reply(`🚫 You need to be a buyer to access this command.
+`);
       return;
     }
 
@@ -310,7 +353,8 @@ bot.command("release", async (ctx) => {
     }
 
     if (balance <= fees) {
-      await ctx.reply("Balance is insufficient to cover the transaction fees.");
+      await ctx.reply(`⚠️ Balance is insufficient to cover the transaction fees.
+`);
       return;
     }
 
@@ -329,7 +373,8 @@ bot.command("release", async (ctx) => {
 
   } catch (error) {
     console.error("Error in release command:", error);
-    await ctx.reply("An error occurred while processing the release. Please try again later.");
+    await ctx.reply(`❌ An error occurred while processing the refund. Please try again later.
+`);
   }
 });
 
@@ -422,21 +467,23 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 
 bot.command("start", async (ctx) => {
   try {
-    const intromessage = `<b>🌟 GOLDESCROWBOT™ v.1</b>
-      An Automated Telegram Escrow Service
-      
-      Welcome to <b>GOLDESCROWBOT™</b>. This bot provides a safe escrow service for your business on Telegram. Never get ripped off again; your funds are safe throughout your deals. If you have any issues, kindly type /contact, and an arbitrator will join the group chat within 24 hours.
-      
-      <b>💰 ESCROW FEE:</b>
-      =>  minimal Chain FEE
-      
-      <b>🔄 UPDATES - VOUCHES</b>
-      <b>✔️ DEALS DONE:</b> 8788
-      <b>⚖️ DISPUTES HANDLED:</b> 732
-      
-      💬 Declare the seller or buyer with /seller or /buyer [BTC/LTC ADDRESS] (Your BTC/LTC address = [BTC/LTC ADDRESS])
-     
-      💡 Type /menu to summon a menu with all bot features`;
+    console.log(ctx.from.id);
+    const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
+An Automated Telegram Escrow Service
+
+Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot provides a safe escrow service for your business on Telegram. Never get ripped off again; your funds are safe throughout your deals. If you have any issues, kindly type /contact, and an arbitrator will join the group chat within 24 hours.
+
+💰 𝗘𝗦𝗖𝗥𝗢𝗪 𝗙𝗘𝗘:
+➡️  minimal Chain FEE
+
+🔄 𝗨𝗣𝗗𝗔𝗧𝗘𝗦 - 𝗩𝗢𝗨𝗖𝗛𝗘𝗦
+✅ 𝗗𝗘𝗔𝗟𝗦 𝗗𝗢𝗡𝗘: 8,788
+⚖️ 𝗗𝗜𝗦𝗣𝗨𝗧𝗘𝗦 𝗛𝗔𝗡𝗗𝗟𝗘𝗗: 732
+
+💬 Declare the seller or buyer with /seller or /buyer [BTC/LTC ADDRESS]
+   (Your BTC/LTC address = [BTC/LTC ADDRESS])
+
+💡 Type /menu to summon a menu with all bot features`;
 
     await ctx.reply(intromessage, { parse_mode: "HTML" });
   } catch (error) {
@@ -584,15 +631,19 @@ bot.command("what_is_escrow", async (ctx) => {
   Escrow is a financial arrangement where a third party (this bot) holds and regulates payment of funds required for two parties involved in a transaction.
 
   <b>How it works:</b>
-  • The buyer and seller agree on a deal.
-  • The buyer deposits funds into escrow.
-  • The seller delivers the product or service.
-  • Once the buyer is satisfied, they issue the /release command to transfer funds to the seller.
-  • If there's a dispute, the seller can issue the /refund command or an arbitrator can step in.
+  •🤝 The buyer and seller agree on a deal.
+
+  •💵 The buyer deposits funds into escrow.
+
+  •📦 The seller delivers the product or service.
+
+  •✅ Once the buyer is satisfied, they issue the /release command to transfer funds to the seller.
+
+  •⚖️ If there's a dispute, the seller can issue the /refund command or an arbitrator can step in.
 
   Escrow ensures both parties are protected during the transaction.`;
 
-    await ctx.reply(escrowMessage, { parse_mode: "HTML" });
+    await ctx.reply(escrowMessage, {parse_mode: "HTML"});
   } catch (error) {
     if (error.response && error.response.error_code === 403) {
       console.log(`Bot was blocked by user ${ctx.from.id}`);
