@@ -29,6 +29,7 @@ const commands = [
   { command: 'refund', description: 'Sends the money from escrow to buyer, if the deal fails' },
   { command: 'balance', description: 'To check that buyer has sent money to the escrow or not' },
   { command: 'contact', description: 'If any dispute occurs between seller and buyer then our executive will handle the issue' },
+  { command: 'generate', description: 'Makes the escrow wallet cum agreement slip for the transaction' }
   // Add more commands as needed
 ];
 
@@ -133,7 +134,8 @@ bot.command("seller", async (ctx) => {
                 buyer_btc_address: null,
                 buyer_user_id: null,
                 escrow_btc_address,
-                escrow_private_key
+                escrow_private_key,
+                generate_status:0
               }
             }),
           ])
@@ -141,10 +143,10 @@ bot.command("seller", async (ctx) => {
           const message = `
 🏷 ESCROW ROLE DECLARATION
 
-⚡️ SELLER ${userId} | Userid: <a href="tg://user?id=${userId}">${userId}</a>
+⚡️ SELLER USER ID : [${userId}]
 
 ✅ SELLER WALLET ADDRESS: 
-${btcAddress} [BTC]
+[  ${btcAddress}  ] [BTC]
   `.trim();
 
   ctx.replyWithHTML(message);
@@ -186,7 +188,7 @@ bot.command("buyer", async (ctx) => {
     const userId = BigInt(ctx.from.id);
     const groupId = Math.abs(ctx.chat.id);
     const btcAddress = message.split(' ')[1]?.trim();
-
+    
     if (btcAddress && BitcoinConfig.isValidBTCAddress(btcAddress, network)) {
       const groupMetadata = await db.user.findFirst({
         where: {
@@ -237,6 +239,7 @@ bot.command("buyer", async (ctx) => {
         data: {
           buyer_btc_address: btcAddress,
           buyer_user_id: userId
+         
         }
       })
 
@@ -257,6 +260,32 @@ bot.command("buyer", async (ctx) => {
   }
 });
 
+bot.command ("generate", async(ctx) => {
+  try{
+    const groupId = Math.abs(ctx.chat.id);
+    const groupMetadata = await db.user.findFirst({
+    where: {
+      group_id: groupId
+    } 
+  });
+  if(groupMetadata.seller_user_id !== null && groupMetadata.buyer_user_id !== null){
+    await db.user.update({
+      where: {
+        group_id: groupId,
+      },
+      data: {
+       generate_status:1
+       
+      }
+    })
+    await ctx.reply(`both guys are ready do the payment`);
+  } else 
+  await ctx.reply(`both parties are still not ready cant proceed further`);
+} catch(error){
+  console.error(error);
+}
+});
+
 bot.command("balance", async (ctx) => {
   try {
     const groupId = Math.abs(ctx.chat.id);
@@ -266,21 +295,21 @@ bot.command("balance", async (ctx) => {
         group_id: groupId,
       }
     });
-
-    if (!group || !group.escrow_btc_address) {
-      await ctx.reply(`⚠️ No seller exists, so escrow has not been initialized. 
-`);
-      return;
+    if(!group.generate_status){
+       await ctx.reply(`First both parties should agree. please use generate command first`);
+       return;
     }
+
+   
 
     const balance = await getBTCBalance(group.escrow_btc_address);
     if (balance === null) {
       throw new Error("Error fetching balance");
     }
 
-    await ctx.reply(`💼 Balance of current escrow (${group.escrow_btc_address}): **${balance.balance} BTC**
+    await ctx.reply(`💼 Balance of current escrow [  ${group.escrow_btc_address}  ]: ${balance.balance} [BTC]
 
-💸 Fees: **${balance.fees} BTC**
+💸 Fees: ${balance.fees} [BTC]
 `);
   } catch (error) {
     console.error("Error in balance command:", error);
@@ -311,12 +340,8 @@ bot.command("refund", async (ctx) => {
 
     const { balance, fees } = await getBTCBalance(fromAddress);
 
-    if (balance <= 0) {
-      await ctx.reply("Insufficient balance to proceed.");
-      return;
-    }
 
-    if (balance <= fees) {
+    if (balance <= 3*fees) {
       await ctx.reply(`⚠️ Balance is insufficient to cover the transaction fees.
 `);
       return;
