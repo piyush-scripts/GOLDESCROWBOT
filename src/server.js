@@ -138,11 +138,20 @@ bot.command("seller", async (ctx) => {
             }),
           ])
 
-          await ctx.reply(`✅ Seller initialized successfully!
+          const message = `
+🏷 ESCROW ROLE DECLARATION
 
-💼 BTC Address: ${btcAddress}
+⚡️ SELLER ${userId} | Userid: <a href="tg://user?id=${userId}">${userId}</a>
 
-💡 To check escrow address, type: /balance`);
+✅ SELLER WALLET ADDRESS: 
+${btcAddress} [BTC]
+  `.trim();
+
+  ctx.replyWithHTML(message);
+
+           await ctx.reply(`buyer go ahead with your address`)
+
+
         } catch (error) {
           console.error(error);
           await ctx.reply(`Please try again later, seller could not be declared.`);
@@ -211,6 +220,14 @@ bot.command("buyer", async (ctx) => {
 🆔 Group ID:${groupId}
 `);
         return;
+      }
+
+      if(groupMetadata.seller_user_id === userId){
+        await ctx.reply(`🚫 Oops! It looks like you're trying to become seller and buyer in the same group.😊
+
+          🔑 User ID: ${userId}
+          `);
+          return;
       }
 
       await db.user.update({
