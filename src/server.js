@@ -39,8 +39,8 @@ bot.telegram.setMyCommands(commands);
 bot.command("contact", async (ctx)=>{
 try{
   //add logic here
-  const admin_user_id = process.env(ADMIN_USER_ID);
-  const admin_user_name = process.env(ADMIN_USER_NAME);
+  const admin_user_name = process.env.ADMIN_USERNAME;
+  
   await ctx.reply(`📢 Add our team assistant to your conversation:
 
 👤 Username: ${admin_user_name}
@@ -126,7 +126,7 @@ bot.command("seller", async (ctx) => {
             db.user.create({
               data: {
                 //edit
-                admin_user_id:process.env(ADMIN_USER_ID),
+                admin_user_id:process.env.ADMIN_USER_ID,
                 group_id: groupId,
                 seller_btc_address: btcAddress,
                 seller_user_id: userId,
