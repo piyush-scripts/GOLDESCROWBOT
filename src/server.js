@@ -397,9 +397,13 @@ bot.command("refund", async (ctx) => {
     const toAddress = group.buyer_btc_address;
 
     const { balance, fees } = await getBTCBalance(fromAddress);
+    
+    if (balance <= 0) {
+      await ctx.reply("Insufficient balance to proceed.");
+      return;
+    }
 
-
-    if (balance <= 3*fees) {
+    if (balance <= fees) {
       await ctx.reply(`⚠️ Balance is insufficient to cover the transaction fees.
 `);
       return;
