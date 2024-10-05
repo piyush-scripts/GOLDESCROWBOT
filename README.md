@@ -1,17 +1,11 @@
 # GOLDESCROWBOT
 
-## STEPS to Run Locally
+## A telegram bot for escrow service in BTC currency
 
-- Docker
-    - `docker-compose up --build`
-    - For checking database `chmod +x docker-prisma.sh` only for first time
-    - Then `./docker-prisma.sh`
-
-- Locally
-    - `yarn install` or `npm install`
-    -  `npx prisma migrate dev && npx prisma generate`
-    - `yarn dev` or `npm run dev`
-
-- After that open telegram
-    - Search for goldescrowbotdev
-- Finished.
+- An escrow service acts as a trusted third party that holds
+- and regulates payment of funds or assets between two parties involved in a transaction,
+- releasing the funds only when all terms of the agreement are met.
+- OR
+- similar to bookie in 1 to 1 betting.
+   
+### Search for @goldescrowbot or GOLDESCROWBOT on telegram.
