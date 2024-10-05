@@ -154,7 +154,7 @@ bot.command("seller", async (ctx) => {
 [  ${btcAddress}  ] [BTC]
   `.trim();
 
-  ctx.replyWithHTML(message);
+ await ctx.replyWithHTML(message);
 
            await ctx.reply(`
 💬 Buyer, go ahead and write /buyer [BTC/LTC ADDRESS]
