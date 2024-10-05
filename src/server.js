@@ -301,11 +301,11 @@ bot.command ("generate", async(ctx) => {
     await ctx.reply(`📍 TRANSACTION INFORMATION
 
 ⚡️ SELLER 
-@${groupMetadata.seller_user_name}
+${groupMetadata.seller_user_name}
 [${groupMetadata.seller_user_id}]
 
 ⚡️ BUYER 
-@${groupMetadata.buyer_user_name}
+${groupMetadata.buyer_user_name}
 [${groupMetadata.buyer_user_id}]
 
 📝 TRANSACTION ID
@@ -328,7 +328,7 @@ Remember, /refund won't refund your money if you're the buyer, regardless of wha
 
 `);
 
-await ctx.reply(`💬 @${groupMetadata.buyer_user_name}, go ahead and pay the agreed amount to the escrow address. 
+await ctx.reply(`💬 ${groupMetadata.buyer_user_name}, go ahead and pay the agreed amount to the escrow address. 
 
 💡 Type /balance for confirmation after payment.`);
 
@@ -360,14 +360,10 @@ bot.command("balance", async (ctx) => {
       throw new Error("Error fetching balance");
     }
 
-    await ctx.reply(`🏦 Escrow Balance: ${balance.balance} BTC
-   The current balance in the escrow account [${group.escrow_btc_address}] is ${balance.balance} BTC.
-
-💸 Transaction Fees: ${balance.fees} BTC
-   The total fees associated with this escrow are ${balance.fees} BTC.
-
-💼 Total Amount: ${balance.balance + balance.fees} BTC
-   The combined total of the escrow balance and fees is ${balance.balance + balance.fees} BTC.
+    await ctx.reply(`🏦 ESCROW BALANCE: ${balance.balance} BTC
+                  🏦  ESCROW ADDRESS  :  [${group.escrow_btc_address}]
+                   💸 TRANSACTION FEE: ${balance.fees} BTC
+   
 `);
   } catch (error) {
     console.error("Error in balance command:", error);
@@ -382,7 +378,7 @@ bot.command("refund", async (ctx) => {
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
-        seller_user_id: userId,
+        
       }
     });
 
@@ -608,7 +604,7 @@ bot.command("admin_refund", async (ctx) => {
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
-        admin_user_id: AdminUserId,
+        
       }
     });
     
@@ -634,8 +630,8 @@ bot.command("admin_refund", async (ctx) => {
     }
     
     const inlineKeyboard = Markup.inlineKeyboard([
-      Markup.button.callback('Yes', `refund_yes_${groupId}`),
-      Markup.button.callback('No', `refund_no_${groupId}`)
+      Markup.button.callback('Yes', `admin_refund_yes_${groupId}`),
+      Markup.button.callback('No', `admin_refund_no_${groupId}`)
     ]);
     
     await ctx.reply(
@@ -683,8 +679,8 @@ bot.command("admin_release", async (ctx) => {
     }
     
     const inlineKeyboard = Markup.inlineKeyboard([
-      Markup.button.callback('Yes', `release_yes_${groupId}`),
-      Markup.button.callback('No', `release_no_${groupId}`)
+      Markup.button.callback('Yes', `admin_release_yes_${groupId}`),
+      Markup.button.callback('No', `admin_release_no_${groupId}`)
     ]);
     
     await ctx.reply(
@@ -701,31 +697,91 @@ bot.command("admin_release", async (ctx) => {
 });
 
 // Action handlers for inline keyboard buttons
-bot.action(/^refund_yes_(\d+)$/, async (ctx) => {
-  const groupId = ctx.match[1];
-  // Implement the refund logic here
-  await ctx.answerCbQuery();
-  await ctx.editMessageText('Refund process initiated. Please wait for confirmation.');
+bot.action(/^admin_refund_(yes|no)_(\d+)$/, async (ctx) => {
+  const [action, response, groupId] = ctx.match;
+  const userId = ctx.from.id;
+
+  try {
+    const group = await db.user.findFirst({
+      where: {
+        group_id: Number(groupId),
+      }
+    });
+
+    if (!group || userId !== Number(group.admin_user_id)) {
+      await ctx.answerCbQuery("You are not authorized to perform this action.");
+      return;
+    }
+
+    if (response === 'yes') {
+      const fromAddress = group.escrow_btc_address;
+      const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
+      const toAddress = group.buyer_btc_address;
+
+      const { balance, fees } = await getBTCBalance(fromAddress);
+      const amountToTransfer = BitcoinConfig.BTCToSatoshis(balance) - BitcoinConfig.BTCToSatoshis(fees);
+
+      const transfer = await transferBitcoin(fromAddress, toAddress, BitcoinConfig.satoshisToBTC(amountToTransfer), privateKey);
+      await ctx.editMessageText(
+        `Refund completed:\n\n` +
+        `Amount: ${amountToTransfer} BTC\n` +
+        `To: ${toAddress}\n` +
+        `Transaction ID: ${transfer}\n` +
+        `Fees: ${fees} BTC`
+      );
+    } else {
+      await ctx.editMessageText("Refund cancelled.");
+    }
+
+    await ctx.answerCbQuery();
+  } catch (error) {
+    console.error("Error in refund action:", error);
+    await ctx.answerCbQuery("An error occurred. Please try again later.");
+  }
 });
 
-bot.action(/^refund_no_(\d+)$/, async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.editMessageText('Refund cancelled.');
+bot.action(/^admin_release_(yes|no)_(\d+)$/, async (ctx) => {
+  const [action, response, groupId] = ctx.match;
+  const userId = ctx.from.id;
+
+  try {
+    const group = await db.user.findFirst({
+      where: {
+        group_id: Number(groupId),
+      }
+    });
+
+    if (!group || userId !== Number(group.admin_user_id)) {
+      await ctx.answerCbQuery("You are not authorized to perform this action.");
+      return;
+    }
+
+    if (response === 'yes') {
+      const fromAddress = group.escrow_btc_address;
+      const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
+      const toAddress = group.seller_btc_address;
+
+      const { balance, fees } = await getBTCBalance(fromAddress);
+      const amountToTransfer = balance - fees;
+
+      const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
+      await ctx.editMessageText(
+        `Release completed:\n\n` +
+        `Amount: ${amountToTransfer.toFixed(8)} BTC\n` +
+        `To: ${toAddress}\n` +
+        `Transaction ID: ${transfer}\n` +
+        `Fees: ${fees.toFixed(8)} BTC`
+      );
+    } else {
+      await ctx.editMessageText("Release cancelled.");
+    }
+
+    await ctx.answerCbQuery();
+  } catch (error) {
+    console.error("Error in release action:", error);
+    await ctx.answerCbQuery("An error occurred. Please try again later.");
+  }
 });
-
-bot.action(/^release_yes_(\d+)$/, async (ctx) => {
-  const groupId = ctx.match[1];
-  // Implement the release logic here
-  await ctx.answerCbQuery();
-  await ctx.editMessageText('Release process initiated. Please wait for confirmation.');
-});
-
-bot.action(/^release_no_(\d+)$/, async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.editMessageText('Release cancelled.');
-});
-
-
 
 bot.command("what_is_escrow", async (ctx) => {
   try {
