@@ -317,9 +317,6 @@ ${groupMetadata.escrow_btc_address} [BTC]
 
 ⚠️ IMPORTANT: AVOID SCAMS!
 
-💬 Always check the escrow address in @CoinEscrowChat.
-For vendors: Confirm the balance on mempool.space.
-
 Useful commands:
 🗒 /release = Always pays the seller.
 🗒 /refund = Always refunds the buyer.
@@ -360,10 +357,15 @@ bot.command("balance", async (ctx) => {
       throw new Error("Error fetching balance");
     }
 
-    await ctx.reply(`🏦 ESCROW BALANCE: ${balance.balance} BTC
-                  🏦  ESCROW ADDRESS  :  [${group.escrow_btc_address}]
-                   💸 TRANSACTION FEE: ${balance.fees} BTC
-   
+    await ctx.reply(`
+   🏦 ESCROW BALANCE:  ${balance.balance} BTC
+
+📍 ESCROW ADDRESS:  
+      ${group.escrow_btc_address}
+
+  💸 TRANSACTION FEE: ${balance.fees} BTC
+
+
 `);
   } catch (error) {
     console.error("Error in balance command:", error);
@@ -501,15 +503,15 @@ bot.action(/^refund_(yes|no)_(\d+)$/, async (ctx) => {
       const toAddress = group.buyer_btc_address;
 
       const { balance, fees } = await getBTCBalance(fromAddress);
-      const amountToTransfer = BitcoinConfig.BTCToSatoshis(balance) - BitcoinConfig.BTCToSatoshis(fees);
+      const amountToTransfer = balance - fees;
 
-      const transfer = await transferBitcoin(fromAddress, toAddress, BitcoinConfig.satoshisToBTC(amountToTransfer), privateKey);
+      const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
       await ctx.editMessageText(
-        `Refund completed:\n\n` +
-        `Amount: ${amountToTransfer} BTC\n` +
-        `To: ${toAddress}\n` +
-        `Transaction ID: ${transfer}\n` +
-        `Fees: ${fees} BTC`
+        `REFUND COMPLETED:\n\n` +
+        `AMOUNT: ${amountToTransfer} BTC\n` +
+        `TO: ${toAddress}\n` +
+        `TRANSACTION ID: ${transfer}\n` +
+        `FEES: ${fees} BTC`
       );
     } else {
       await ctx.editMessageText("Refund cancelled.");
@@ -719,15 +721,15 @@ bot.action(/^admin_refund_(yes|no)_(\d+)$/, async (ctx) => {
       const toAddress = group.buyer_btc_address;
 
       const { balance, fees } = await getBTCBalance(fromAddress);
-      const amountToTransfer = BitcoinConfig.BTCToSatoshis(balance) - BitcoinConfig.BTCToSatoshis(fees);
+      const amountToTransfer = balance - fees;
 
-      const transfer = await transferBitcoin(fromAddress, toAddress, BitcoinConfig.satoshisToBTC(amountToTransfer), privateKey);
+      const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
       await ctx.editMessageText(
-        `Refund completed:\n\n` +
-        `Amount: ${amountToTransfer} BTC\n` +
-        `To: ${toAddress}\n` +
-        `Transaction ID: ${transfer}\n` +
-        `Fees: ${fees} BTC`
+        `REFUND COMPLETED:\n` +
+        `AMOUNT: ${amountToTransfer} BTC\n` +
+        `TO: ${toAddress}\n` +
+        `TRANSACTION ID: ${transfer}\n` +
+        `FEE: ${fees} BTC`
       );
     } else {
       await ctx.editMessageText("Refund cancelled.");
@@ -766,11 +768,11 @@ bot.action(/^admin_release_(yes|no)_(\d+)$/, async (ctx) => {
 
       const transfer = await transferBitcoin(fromAddress, toAddress, amountToTransfer, privateKey);
       await ctx.editMessageText(
-        `Release completed:\n\n` +
-        `Amount: ${amountToTransfer.toFixed(8)} BTC\n` +
-        `To: ${toAddress}\n` +
-        `Transaction ID: ${transfer}\n` +
-        `Fees: ${fees.toFixed(8)} BTC`
+        `RELEASE COMPLETED:\n` +
+        `AMOUNT: ${amountToTransfer.toFixed(8)} BTC\n` +
+        `TO: ${toAddress}\n` +
+        `TRANSACTION ID: ${transfer}\n` +
+        `FEES: ${fees.toFixed(8)} BTC`
       );
     } else {
       await ctx.editMessageText("Release cancelled.");
