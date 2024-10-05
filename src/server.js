@@ -278,7 +278,42 @@ bot.command ("generate", async(ctx) => {
        
       }
     })
-    await ctx.reply(`both guys are ready do the payment`);
+    await ctx.reply(`📍 TRANSACTION INFORMATION
+
+⚡️ SELLER 
+@${groupMetadata.seller_user_name}
+[${groupMetadata.seller_user_id}]
+
+⚡️ BUYER 
+@${groupMetadata.buyer_user_name}
+[${groupMetadata.buyer_user_id}]
+
+📝 TRANSACTION ID
+${groupId}
+
+🟢 ESCROW ADDRESS
+${groupMetadata.escrow_btc_address} [BTC]
+
+
+⚠️ IMPORTANT: AVOID SCAMS!
+
+💬 Always check the escrow address in @CoinEscrowChat.
+For vendors: Confirm the balance on mempool.space.
+
+Useful commands:
+🗒 /release = Always pays the seller.
+🗒 /refund = Always refunds the buyer.
+
+Remember, /refund won't refund your money if you're the buyer, regardless of what anyone says.
+
+`);
+
+ctx.reply('💬 @${groupMetadata.buyer_user_id},go ahead and pay the agreed amount to the escrow address.
+
+
+
+💡 Type /balance after 1 confirmation.');
+
   } else 
   await ctx.reply(`both parties are still not ready cant proceed further`);
 } catch(error){
