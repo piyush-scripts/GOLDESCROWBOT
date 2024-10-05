@@ -104,7 +104,7 @@ Need help? Don't hesitate to use the /contact command!`;
 bot.command("seller", async (ctx) => {
   try {
     const message = ctx.message.text;
-    const userName= string(ctx.from.username);
+    const userName= ctx.from.username;
     const groupId = Math.abs(ctx.chat.id);
     const userId = BigInt(ctx.from.id);
     const btcAddress = message.split(' ')[1]?.trim();
@@ -156,7 +156,10 @@ bot.command("seller", async (ctx) => {
 
   ctx.replyWithHTML(message);
 
-           await ctx.reply(`buyer go ahead with your address`)
+           await ctx.reply(`
+💬 Buyer, go ahead and write /buyer [BTC/LTC ADDRESS]
+
+💡 (Replace [BTC/LTC ADDRESS] with your own address)`)
 
 
         } catch (error) {
@@ -191,7 +194,7 @@ bot.command("buyer", async (ctx) => {
   try {
     const message = ctx.message.text;
     const userId = BigInt(ctx.from.id);
-    const userName = string(ctx.from.username);
+    const userName = ctx.from.username;
     const groupId = Math.abs(ctx.chat.id);
     const btcAddress = message.split(' ')[1]?.trim();
     
