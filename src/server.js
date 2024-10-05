@@ -360,9 +360,14 @@ bot.command("balance", async (ctx) => {
       throw new Error("Error fetching balance");
     }
 
-    await ctx.reply(`💼 Balance of current escrow [  ${group.escrow_btc_address}  ]: ${balance.balance} [BTC]
+    await ctx.reply(`🏦 Escrow Balance: ${balance.balance} BTC
+   The current balance in the escrow account [${group.escrow_btc_address}] is ${balance.balance} BTC.
 
-💸 Fees: ${balance.fees} [BTC]
+💸 Transaction Fees: ${balance.fees} BTC
+   The total fees associated with this escrow are ${balance.fees} BTC.
+
+💼 Total Amount: ${balance.balance + balance.fees} BTC
+   The combined total of the escrow balance and fees is ${balance.balance + balance.fees} BTC.
 `);
   } catch (error) {
     console.error("Error in balance command:", error);
