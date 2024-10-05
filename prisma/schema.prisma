@@ -26,6 +26,8 @@ model User {
   group_id                  BigInt @id
   seller_user_id            BigInt?
   buyer_user_id             BigInt?
+  seller_user_name          String?
+  buyer_user_name           String?
   seller_btc_address        String?
   buyer_btc_address         String?
   escrow_btc_address        String?

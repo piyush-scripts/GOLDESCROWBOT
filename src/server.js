@@ -104,6 +104,7 @@ Need help? Don't hesitate to use the /contact command!`;
 bot.command("seller", async (ctx) => {
   try {
     const message = ctx.message.text;
+    const userName= string(ctx.from.username);
     const groupId = Math.abs(ctx.chat.id);
     const userId = BigInt(ctx.from.id);
     const btcAddress = message.split(' ')[1]?.trim();
@@ -131,8 +132,10 @@ bot.command("seller", async (ctx) => {
                 group_id: groupId,
                 seller_btc_address: btcAddress,
                 seller_user_id: userId,
+                seller_user_name: userName,
                 buyer_btc_address: null,
                 buyer_user_id: null,
+                buyer_user_name:null,
                 escrow_btc_address,
                 escrow_private_key,
                 generate_status:0
@@ -144,6 +147,8 @@ bot.command("seller", async (ctx) => {
 🏷 ESCROW ROLE DECLARATION
 
 ⚡️ SELLER USER ID : [${userId}]
+
+⚡️ SELLER USER NAME : [${userName}]
 
 ✅ SELLER WALLET ADDRESS: 
 [  ${btcAddress}  ] [BTC]
@@ -186,6 +191,7 @@ bot.command("buyer", async (ctx) => {
   try {
     const message = ctx.message.text;
     const userId = BigInt(ctx.from.id);
+    const userName = string(ctx.from.username);
     const groupId = Math.abs(ctx.chat.id);
     const btcAddress = message.split(' ')[1]?.trim();
     
@@ -209,9 +215,10 @@ bot.command("buyer", async (ctx) => {
 
 
       if (groupMetadata.seller_btc_address === btcAddress) {
-        await ctx.reply(`🚫 Oops! It looks like you're trying to use the seller's BTC address as your own. Please provide **your** BTC address instead. 😊
+        await ctx.reply(`🚫 Oops! It looks like you're trying to use the seller's BTC address as your own. Please provide your BTC address instead. 😊
 
 🔑 User ID: ${userId}
+   User Name: ${userName}
 `);
         return;
       }
@@ -238,15 +245,25 @@ bot.command("buyer", async (ctx) => {
         },
         data: {
           buyer_btc_address: btcAddress,
-          buyer_user_id: userId
+          buyer_user_id: userId,
+          buyer_user_name: userName
          
         }
       })
 
-      await ctx.reply(`🛒 Buyer initialized with BTC Address: ${btcAddress}
+      const message = `
+🏷 ESCROW ROLE DECLARATION
 
-💰 To send BTC to escrow, type **/balance**.
-`);
+⚡️ BUYER USER ID : [${userId}]
+
+⚡️ BUYER USER NAME : [${userName}]
+
+✅ BUYER WALLET ADDRESS: 
+[  ${btcAddress}  ] [BTC]
+  `.trim();
+
+  ctx.replyWithHTML(message);
+
 
     } else {
       await ctx.reply(`🚫 Please provide a valid BTC address. 🪙
@@ -308,14 +325,12 @@ Remember, /refund won't refund your money if you're the buyer, regardless of wha
 
 `);
 
-ctx.reply('💬 @${groupMetadata.buyer_user_id},go ahead and pay the agreed amount to the escrow address.
+await ctx.reply(`💬 @${groupMetadata.buyer_user_name}, go ahead and pay the agreed amount to the escrow address. 
 
-
-
-💡 Type /balance after 1 confirmation.');
+💡 Type /balance for confirmation after payment.`);
 
   } else 
-  await ctx.reply(`both parties are still not ready cant proceed further`);
+  await ctx.reply(`⚠️ Both parties are still not ready cant proceed further.`);
 } catch(error){
   console.error(error);
 }
