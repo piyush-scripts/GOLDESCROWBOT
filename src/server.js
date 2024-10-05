@@ -138,7 +138,7 @@ bot.command("seller", async (ctx) => {
                 buyer_user_name:null,
                 escrow_btc_address,
                 escrow_private_key,
-                generate_status:0
+                generate_status:false
               }
             }),
           ])
@@ -265,7 +265,7 @@ bot.command("buyer", async (ctx) => {
 [  ${btcAddress}  ] [BTC]
   `.trim();
 
-  ctx.replyWithHTML(message);
+ await ctx.replyWithHTML(message);
 
 
     } else {
@@ -294,7 +294,7 @@ bot.command ("generate", async(ctx) => {
         group_id: groupId,
       },
       data: {
-       generate_status:1
+       generate_status:true
        
       }
     })
