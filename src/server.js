@@ -570,7 +570,7 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 bot.command("start", async (ctx) => {
   try {
     console.log(ctx.from.id);
-    const videoUrl ="https://youtube.com/shorts/5MVVHIY4xXs?si=cyJ3BuILxVQObPJ_";
+    const videoUrl ="https://utfs.io/f/a024ld4sUovPpUw2HIyxZ0eXRoHPjB3uSkIz5yQln8Yf4h6r";
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
