@@ -570,6 +570,7 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 bot.command("start", async (ctx) => {
   try {
     console.log(ctx.from.id);
+    const videoUrl =https://youtube.com/shorts/5MVVHIY4xXs?si=cyJ3BuILxVQObPJ_;
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
@@ -587,7 +588,7 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 
 💡 Type /menu to summon a menu with all bot features`;
 
-    await ctx.reply(intromessage, { parse_mode: "HTML" });
+    await ctx.replyWithVideo(videoUrl, { caption:intromessage,parse_mode: "HTML" });
   } catch (error) {
     if (error.response && error.response.error_code === 403) {
       console.log(`Bot was blocked by user ${ctx.from.id}`);
