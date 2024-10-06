@@ -570,7 +570,6 @@ bot.command("start", async (ctx) => {
   try {
     console.log(ctx.from.id);
     const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
-    console.log(fileUri)
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
