@@ -22,6 +22,7 @@ const commands = [
   { command: 'start', description: 'Starts the bot' },
   { command: 'menu', description: 'Shows all the commands in a text message' },
   { command: 'what_is_escrow', description: 'Explains exactly how escrow works' },
+  { command: 'how_to_use', description: 'Explains exactly how to use this bot' },
   { command: 'seller', description: 'Makes you the seller in this group' },
   { command: 'buyer', description: ' Makes you the buyer in this group' },
   { command: 'release', description: 'Sends the money from escrow to seller' },
@@ -36,20 +37,20 @@ const commands = [
 bot.telegram.setMyCommands(commands);
 
 
-bot.command("contact", async (ctx)=>{
-try{
-  //add logic here
-  const admin_user_name = process.env.ADMIN_USERNAME;
-  
-  await ctx.reply(`📢 Add our team assistant to your conversation:
+bot.command("contact", async (ctx) => {
+  try {
+    //add logic here
+    const admin_user_name = process.env.ADMIN_USERNAME;
+
+    await ctx.reply(`📢 Add our team assistant to your conversation:
 
 👤 Username: ${admin_user_name}
 
 ✅ Please add this user to your group for assistance.`)
-}
-catch (err){
-  console.error(err);
-}
+  }
+  catch (err) {
+    console.error(err);
+  }
 
 
 
@@ -103,7 +104,7 @@ Need help? Don't hesitate to use the /contact command!`;
 bot.command("seller", async (ctx) => {
   try {
     const message = ctx.message.text;
-    const userName= ctx.from.username;
+    const userName = ctx.from.username;
     const groupId = Math.abs(ctx.chat.id);
     const userId = BigInt(ctx.from.id);
     const btcAddress = message.split(' ')[1]?.trim();
@@ -127,17 +128,17 @@ bot.command("seller", async (ctx) => {
             db.user.create({
               data: {
                 //edit
-                admin_user_id:process.env.ADMIN_USER_ID,
+                admin_user_id: process.env.ADMIN_USER_ID,
                 group_id: groupId,
                 seller_btc_address: btcAddress,
                 seller_user_id: userId,
                 seller_user_name: userName,
                 buyer_btc_address: null,
                 buyer_user_id: null,
-                buyer_user_name:null,
+                buyer_user_name: null,
                 escrow_btc_address,
                 escrow_private_key,
-                generate_status:false
+                generate_status: false
               }
             }),
           ])
@@ -153,9 +154,9 @@ bot.command("seller", async (ctx) => {
 [  ${btcAddress}  ] [BTC]
   `.trim();
 
- await ctx.replyWithHTML(message);
+          await ctx.replyWithHTML(message);
 
-           await ctx.reply(`
+          await ctx.reply(`
 💬 Buyer, go ahead and write /buyer [BTC/LTC ADDRESS]
 
 💡 (Replace [BTC/LTC ADDRESS] with your own address)`)
@@ -196,14 +197,14 @@ bot.command("buyer", async (ctx) => {
     const userName = ctx.from.username;
     const groupId = Math.abs(ctx.chat.id);
     const btcAddress = message.split(' ')[1]?.trim();
-    
+
     if (btcAddress && BitcoinConfig.isValidBTCAddress(btcAddress, network)) {
       const groupMetadata = await db.user.findFirst({
         where: {
           group_id: groupId
         }
       });
-      
+
       if (groupMetadata === null || groupMetadata.group_id === null) {
         await ctx.reply(`❌ Action Not Possible
 
@@ -233,12 +234,12 @@ bot.command("buyer", async (ctx) => {
         return;
       }
 
-      if(groupMetadata.seller_user_id === userId){
+      if (groupMetadata.seller_user_id === userId) {
         await ctx.reply(`🚫 Oops! It looks like you're trying to become seller and buyer in the same group.😊
 
           🔑 User ID: ${userId}
           `);
-          return;
+        return;
       }
 
       await db.user.update({
@@ -249,7 +250,7 @@ bot.command("buyer", async (ctx) => {
           buyer_btc_address: btcAddress,
           buyer_user_id: userId,
           buyer_user_name: userName
-         
+
         }
       })
 
@@ -264,7 +265,7 @@ bot.command("buyer", async (ctx) => {
 [  ${btcAddress}  ] [BTC]
   `.trim();
 
- await ctx.replyWithHTML(message);
+      await ctx.replyWithHTML(message);
 
 
     } else {
@@ -279,25 +280,25 @@ bot.command("buyer", async (ctx) => {
   }
 });
 
-bot.command ("generate", async(ctx) => {
-  try{
+bot.command("generate", async (ctx) => {
+  try {
     const groupId = Math.abs(ctx.chat.id);
     const groupMetadata = await db.user.findFirst({
-    where: {
-      group_id: groupId
-    } 
-  });
-  if(groupMetadata.seller_user_id !== null && groupMetadata.buyer_user_id !== null){
-    await db.user.update({
       where: {
-        group_id: groupId,
-      },
-      data: {
-       generate_status:true
-       
+        group_id: groupId
       }
-    })
-    await ctx.reply(`📍 TRANSACTION INFORMATION
+    });
+    if (groupMetadata.seller_user_id !== null && groupMetadata.buyer_user_id !== null) {
+      await db.user.update({
+        where: {
+          group_id: groupId,
+        },
+        data: {
+          generate_status: true
+
+        }
+      })
+      await ctx.reply(`📍 TRANSACTION INFORMATION
 
 ⚡️ SELLER 
 ${groupMetadata.seller_user_name}
@@ -324,15 +325,15 @@ Remember, /refund won't refund your money if you're the buyer, regardless of wha
 
 `);
 
-await ctx.reply(`💬 ${groupMetadata.buyer_user_name}, go ahead and pay the agreed amount to the escrow address. 
+      await ctx.reply(`💬 ${groupMetadata.buyer_user_name}, go ahead and pay the agreed amount to the escrow address. 
 
 💡 Type /balance for confirmation after payment.`);
 
-  } else 
-  await ctx.reply(`⚠️ Both parties are still not ready cant proceed further.`);
-} catch(error){
-  console.error(error);
-}
+    } else
+      await ctx.reply(`⚠️ Both parties are still not ready cant proceed further.`);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 bot.command("balance", async (ctx) => {
@@ -344,12 +345,12 @@ bot.command("balance", async (ctx) => {
         group_id: groupId,
       }
     });
-    if(!group.generate_status){
-       await ctx.reply(`First both parties should agree. please use generate command first`);
-       return;
+    if (!group.generate_status) {
+      await ctx.reply(`First both parties should agree. please use generate command first`);
+      return;
     }
 
-   
+
 
     const balance = await getBTCBalance(group.escrow_btc_address);
     if (balance === null) {
@@ -375,11 +376,11 @@ bot.command("refund", async (ctx) => {
   try {
     const userId = ctx.from.id;
     const groupId = Math.abs(ctx.chat.id);
-    
+
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
-        
+
       }
     });
 
@@ -394,7 +395,7 @@ bot.command("refund", async (ctx) => {
     const toAddress = group.buyer_btc_address;
 
     const { balance, fees } = await getBTCBalance(fromAddress);
-    
+
     if (balance <= 0) {
       await ctx.reply("Insufficient balance to proceed.");
       return;
@@ -566,6 +567,49 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
   }
 });
 
+bot.command("how_to_use", async (ctx) => {
+  try {
+    const message = `💼 How to use goldescrowbot💼
+
+✅Step 1  :- Buyer create a group including only 3 people, buyer seller and goldescrowbot.
+
+Start with /start command.
+
+✅Step 2: First the seller and the buyer have to provide their Bitcoin address.
+
+Example: /buyer bc1q573lqaf0haqrz579c5dpwa3nvftscxtdmybpwad
+
+Or 
+
+/seller bc1q573lqaf0haqrz579c5dpwa3nvftscxtdmybpwad
+
+✅Step 3 : After this, the terms and conditions for the deal will have to be stated and the buyer or seller will write “Term Agree”. And click on /generate to generate the transaction list.
+
+✅Step 4 :Then payment has to be made on the given escrow BTC address, and before making the payment, cheak the btc address through real admin , then the payment has to be made.
+
+✅Step 5 : After the buyer makes the payment, the seller checks the deposit amount using the /balance command.
+
+✅Step 6 : If the amount confirmed in the deal has been deposited, the seller can provide service or goods to the buyer.
+
+✅Step 7 : After receiving the service or goods, buyer can release payment to the seller , using the /release command.
+
+✅Step 8 : In case if the seller is unable to provide any service or goods then the seller will have to return the amount deposited in the escrow by using refund command /refund.
+
+✅Step 9 : If the seller or buyer faces any kind of problem or scam, you can involve admin in the deal, but do not forget to capture screenshot of deal group and do the screen recording of the deal group ,this will help you in getting the proof. .
+
+And remember, if the seller or buyer removes you from the deal group, or creates any kind of problem, with the intention of scamming you, then there is no need to worry, the funds will always be safe, those funds will not be withdrawn or refunded withdrawal proper way ,refund only by seller, and release only by buyer, no one can manipulate except admin .
+
+And despute message admin or use /contact command.
+
+📔@goldescrowbot📔
+
+👉Support @goldescrowbotadmin`;
+    await ctx.reply(message);
+  } catch (error) {
+    console.error(error)
+  }
+})
+
 bot.command("start", async (ctx) => {
   try {
     console.log(ctx.from.id);
@@ -587,7 +631,7 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 
 💡 Type /menu to summon a menu with all bot features`;
 
-    await ctx.reply(intromessage,{
+    await ctx.reply(intromessage, {
       parse_mode: "HTML",
     });
   } catch (error) {
@@ -604,40 +648,40 @@ bot.command("admin_refund", async (ctx) => {
   try {
     const AdminUserId = ctx.from.id;
     const groupId = Math.abs(ctx.chat.id);
-    
+
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
-        
+
       }
     });
-    
+
     if (!group || AdminUserId !== Number(group.admin_user_id)) {
       await ctx.reply("You need to be an Admin to access this command.");
       return;
     }
-    
+
     const fromAddress = group.escrow_btc_address;
     const privateKey = decryptPrivateKey(JSON.parse(group.escrow_private_key));
     const toAddress = group.buyer_btc_address;
-    
+
     const { balance, fees } = await getBTCBalance(fromAddress);
-    
+
     if (balance <= 0) {
       await ctx.reply("Insufficient balance to proceed.");
       return;
     }
-    
+
     if (balance <= fees) {
       await ctx.reply("Balance is insufficient to cover the transaction fees.");
       return;
     }
-    
+
     const inlineKeyboard = Markup.inlineKeyboard([
       Markup.button.callback('Yes', `admin_refund_yes_${groupId}`),
       Markup.button.callback('No', `admin_refund_no_${groupId}`)
     ]);
-    
+
     await ctx.reply(
       `Do you want to refund the following amount?\n\n` +
       `Balance: ${balance.toFixed(8)} BTC\n` +
@@ -655,38 +699,38 @@ bot.command("admin_release", async (ctx) => {
   try {
     const AdminUserId = ctx.from.id;
     const groupId = Math.abs(ctx.chat.id);
-    
+
     const group = await db.user.findFirst({
       where: {
         group_id: groupId,
       }
     });
-    
+
     if (!group || AdminUserId !== Number(group.admin_user_id)) {
       await ctx.reply("You need to be an admin to access this command.");
       return;
     }
-    
+
     const fromAddress = group.escrow_btc_address;
     const toAddress = group.seller_btc_address;
-    
+
     const { balance, fees } = await getBTCBalance(fromAddress);
-    
+
     if (balance <= 0) {
       await ctx.reply("Insufficient balance to proceed.");
       return;
     }
-    
+
     if (balance <= fees) {
       await ctx.reply("Balance is insufficient to cover the transaction fees.");
       return;
     }
-    
+
     const inlineKeyboard = Markup.inlineKeyboard([
       Markup.button.callback('Yes', `admin_release_yes_${groupId}`),
       Markup.button.callback('No', `admin_release_no_${groupId}`)
     ]);
-    
+
     await ctx.reply(
       `Do you want to release the following amount?\n\n` +
       `Balance: ${balance.toFixed(8)} BTC\n` +
@@ -807,7 +851,7 @@ bot.command("what_is_escrow", async (ctx) => {
 
 🛡 Escrow ensures both parties are protected during the transaction.`;
 
-    await ctx.reply(escrowMessage, {parse_mode: "HTML"});
+    await ctx.reply(escrowMessage, { parse_mode: "HTML" });
   } catch (error) {
     if (error.response && error.response.error_code === 403) {
       console.log(`Bot was blocked by user ${ctx.from.id}`);
@@ -828,10 +872,10 @@ try {
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
 
-app.get('/healthz', (req, res)=> {
+app.get('/healthz', (req, res) => {
   res.send('Bot is running!')
 })
 
-app.listen(PORT, ()=> {
+app.listen(PORT, () => {
   console.log(`Bot is now running on PORT: ${PORT}`);
 })
