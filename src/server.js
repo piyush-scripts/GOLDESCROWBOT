@@ -790,41 +790,22 @@ bot.action(/^admin_release_(yes|no)_(\d+)$/, async (ctx) => {
 bot.command("what_is_escrow", async (ctx) => {
   try {
     const escrowMessage = `
-💼 How to use goldescrowbot💼
+🔐 What is Escrow?
 
-✅Step 1  :- Buyer create a group including only 3 people, buyer seller and goldescrowbot.
+💼 Escrow is a financial arrangement where a third party (this bot) holds and regulates payment of funds required for two parties involved in a transaction.
 
-Start with /start command.
+  How it works:
+  •🤝 The buyer and seller agree on a deal.
 
-✅Step 2: First the seller and the buyer have to provide their Bitcoin address.
+  •💵 The buyer deposits funds into escrow.
 
-Example: /buyer bc1q573lqaf0haqrz579c5dpwa3nvftscxtdmybpwad
+  •📦 The seller delivers the product or service.
 
-Or 
+  •✅ Once the buyer is satisfied, they issue the /release command to transfer funds to the seller.
 
-/seller bc1q573lqaf0haqrz579c5dpwa3nvftscxtdmybpwad
+  •⚖ If there's a dispute, the seller can issue the /refund command or an arbitrator can step in.
 
-✅Step 3 : After this, the terms and conditions for the deal will have to be stated and the buyer or seller will write “Term Agree”. And click on /generate to generate the transaction list.
-
-✅Step 4 :Then payment has to be made on the given escrow BTC address, and before making the payment, cheak the btc address through real admin , then the payment has to be made.
-
-✅Step 5 : After the buyer makes the payment, the seller checks the deposit amount using the /balance command.
-
-✅Step 6 : If the amount confirmed in the deal has been deposited, the seller can provide service or goods to the buyer.
-
-✅Step 7 : After receiving the service or goods, buyer can release payment to the seller , using the /release command.
-
-✅Step 8 : In case if the seller is unable to provide any service or goods then the seller will have to return the amount deposited in the escrow by using refund command /refund.
-
-✅Step 9 : If the seller or buyer faces any kind of problem or scam, you can involve admin in the deal, but do not forget to capture screenshot of deal group and do the screen recording of the deal group ,this will help you in getting the proof. .
-
-And remember, if the seller or buyer removes you from the deal group, or creates any kind of problem, with the intention of scamming you, then there is no need to worry, the funds will always be safe, those funds will not be withdrawn or refunded withdrawal proper way ,refund only by seller, and release only by buyer, no one can manipulate except admin .
-
-And despute message admin or use /contact command.
-
-📔@goldescrowbot📔
-
-👉Support @goldescrowbotadmin`;
+🛡 Escrow ensures both parties are protected during the transaction.`;
 
     await ctx.reply(escrowMessage, {parse_mode: "HTML"});
   } catch (error) {
