@@ -569,7 +569,7 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 bot.command("start", async (ctx) => {
   try {
     console.log(ctx.from.id);
-    const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
+    // const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
@@ -587,8 +587,7 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 
 💡 Type /menu to summon a menu with all bot features`;
 
-    await ctx.replyWithVideo({url: videoUrl}, {
-      caption: intromessage,
+    await ctx.reply(intromessage,{
       parse_mode: "HTML",
     });
   } catch (error) {
@@ -791,22 +790,41 @@ bot.action(/^admin_release_(yes|no)_(\d+)$/, async (ctx) => {
 bot.command("what_is_escrow", async (ctx) => {
   try {
     const escrowMessage = `
-<b>🔐 What is Escrow?</b>
+💼 How to use goldescrowbot💼
 
-💼 Escrow is a financial arrangement where a third party (this bot) holds and regulates payment of funds required for two parties involved in a transaction.
+✅Step 1  :- Buyer create a group including only 3 people, buyer seller and goldescrowbot.
 
-  <b>How it works:</b>
-  •🤝 The buyer and seller agree on a deal.
+Start with /start command.
 
-  •💵 The buyer deposits funds into escrow.
+✅Step 2: First the seller and the buyer have to provide their Bitcoin address.
 
-  •📦 The seller delivers the product or service.
+Example: /buyer bc1q573lqaf0haqrz579c5dpwa3nvftscxtdmybpwad
 
-  •✅ Once the buyer is satisfied, they issue the /release command to transfer funds to the seller.
+Or 
 
-  •⚖️ If there's a dispute, the seller can issue the /refund command or an arbitrator can step in.
+/seller bc1q573lqaf0haqrz579c5dpwa3nvftscxtdmybpwad
 
-<i>🛡️ Escrow ensures both parties are protected during the transaction.</i>`;
+✅Step 3 : After this, the terms and conditions for the deal will have to be stated and the buyer or seller will write “Term Agree”. And click on /generate to generate the transaction list.
+
+✅Step 4 :Then payment has to be made on the given escrow BTC address, and before making the payment, cheak the btc address through real admin , then the payment has to be made.
+
+✅Step 5 : After the buyer makes the payment, the seller checks the deposit amount using the /balance command.
+
+✅Step 6 : If the amount confirmed in the deal has been deposited, the seller can provide service or goods to the buyer.
+
+✅Step 7 : After receiving the service or goods, buyer can release payment to the seller , using the /release command.
+
+✅Step 8 : In case if the seller is unable to provide any service or goods then the seller will have to return the amount deposited in the escrow by using refund command /refund.
+
+✅Step 9 : If the seller or buyer faces any kind of problem or scam, you can involve admin in the deal, but do not forget to capture screenshot of deal group and do the screen recording of the deal group ,this will help you in getting the proof. .
+
+And remember, if the seller or buyer removes you from the deal group, or creates any kind of problem, with the intention of scamming you, then there is no need to worry, the funds will always be safe, those funds will not be withdrawn or refunded withdrawal proper way ,refund only by seller, and release only by buyer, no one can manipulate except admin .
+
+And despute message admin or use /contact command.
+
+📔@goldescrowbot📔
+
+👉Support @goldescrowbotadmin`;
 
     await ctx.reply(escrowMessage, {parse_mode: "HTML"});
   } catch (error) {
