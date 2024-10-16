@@ -569,7 +569,7 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 
 bot.command("how_to_use", async (ctx) => {
   try {
-    const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
+    // const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
     const message = `💼 How to use goldescrowbot💼
 
 ✅Step 1  :- Buyer create a group including only 3 people, buyer seller and goldescrowbot.
@@ -605,10 +605,11 @@ And despute message admin or use /contact command.
 📔@goldescrowbot📔
 
 👉Support @goldescrowbotadmin`;
-    await ctx.replyWithVideo({url: videoUrl},{
-      caption: message,
-      parse_mode: "HTML"
-    });
+    // await ctx.replyWithVideo({url: videoUrl},{
+    //   caption: message,
+    //   parse_mode: "HTML"
+    // });
+    await ctx.reply(message)
   } catch (error) {
     console.error(error)
   }
@@ -617,7 +618,7 @@ And despute message admin or use /contact command.
 bot.command("start", async (ctx) => {
   try {
     console.log(ctx.from.id);
-    // const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
+    const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
@@ -635,9 +636,14 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 
 💡 Type /menu to summon a menu with all bot features`;
 
-    await ctx.reply(intromessage, {
-      parse_mode: "HTML",
-    });
+    // await ctx.reply(intromessage, {
+    //   parse_mode: "HTML",
+    // });
+
+    await ctx.replyWithVideo({url: videoUrl}, {
+      caption: intromessage,
+      parse_mode: "HTML"
+    })
   } catch (error) {
     if (error.response && error.response.error_code === 403) {
       console.log(`Bot was blocked by user ${ctx.from.id}`);
