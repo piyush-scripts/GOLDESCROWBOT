@@ -569,7 +569,7 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 
 bot.command("how_to_use", async (ctx) => {
   try {
-    // const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
+    // const videoUrl = `https://utfs.io/f/a024ld4sUovPpEQRR8yxZ0eXRoHPjB3uSkIz5yQln8Yf4h6r`
     const message = `💼 How to use goldescrowbot💼
 
 ✅Step 1  :- Buyer create a group including only 3 people, buyer seller and goldescrowbot.
