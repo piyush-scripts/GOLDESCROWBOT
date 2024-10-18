@@ -617,8 +617,17 @@ And despute message admin or use /contact command.
 
 bot.command("start", async (ctx) => {
   try {
-    console.log(ctx.from.id);
-    const videoUrl = `https://utfs.io/f/a024ld4sUovPzsUwDGxcYMGHm3PB7Q8XidgoF5wkOeLNfK0E`
+    let deals = 8788;
+    const intervalForDeals = setInterval(() => {
+      deals += 3;
+     
+    }, 60000); 
+    let disputes = 8788;
+    const intervalForDisputes = setInterval(() => {
+      disputes += 1;
+      }, 500000);
+  
+    const videoUrl = `https://utfs.io/f/a024ld4sUovPpEQRR8yxZ0eXRoHPjB3uSkIz5yQln8Yf4h6r`
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
@@ -628,11 +637,11 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 ➡️  minimal Chain FEE
 
 🔄 𝗨𝗣𝗗𝗔𝗧𝗘𝗦 - 𝗩𝗢𝗨𝗖𝗛𝗘𝗦
-✅ 𝗗𝗘𝗔𝗟𝗦 𝗗𝗢𝗡𝗘: 8,788
-⚖️ 𝗗𝗜𝗦𝗣𝗨𝗧𝗘𝗦 𝗛𝗔𝗡𝗗𝗟𝗘𝗗: 732
+✅ 𝗗𝗘𝗔𝗟𝗦 𝗗𝗢𝗡𝗘: ${deals}
+⚖️ 𝗗𝗜𝗦𝗣𝗨𝗧𝗘𝗦 𝗛𝗔𝗡𝗗𝗟𝗘𝗗: ${disputes}
 
-💬 Declare the seller or buyer with /seller or /buyer [BTC/LTC ADDRESS]
-   (Your BTC/LTC address = [BTC/LTC ADDRESS])
+💬 Declare the seller or buyer with /seller or /buyer [BTC ADDRESS]
+   (Your BTC/LTC address = [BTC ADDRESS])
 
 💡 Type /menu to summon a menu with all bot features`;
 
@@ -878,6 +887,8 @@ try {
 } catch (err) {
   console.error(err);
 }
+
+
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
