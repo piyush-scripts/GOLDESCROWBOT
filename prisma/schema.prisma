@@ -37,6 +37,7 @@ model User {
 }
 
 model counter {
-  deals                    BigInt@id
-  disputes                 BigInt?
+  id Int @id @default(autoincrement())
+  deals                    Int
+  disputes                 Int?
 }

@@ -34,7 +34,7 @@ const commands = [
 ];
 bot.telegram.setMyCommands(commands);
 
-const updateInterval = 60 * 1000; 
+const updateInterval = 1 * 1000; 
 
 setInterval(async () => {
   try {
@@ -47,7 +47,9 @@ setInterval(async () => {
     }
 
     const updatedCounter = await db.counter.update({
-     
+     where: {
+      id: 1
+     },
       data: {
         deals: counterData.deals + 3,
         disputes: counterData.disputes + 1
