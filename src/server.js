@@ -32,9 +32,33 @@ const commands = [
   { command: 'generate', description: 'Makes the escrow wallet cum agreement slip for the transaction' }
   // Add more commands as needed
 ];
-
-// Set the commands for your bot
 bot.telegram.setMyCommands(commands);
+
+const updateInterval = 60 * 1000; 
+
+setInterval(async () => {
+  try {
+    
+    const counterData = await db.counter.findFirst();
+
+    if (!counterData) {
+      console.error('Counter data not found');
+      return;
+    }
+
+    const updatedCounter = await db.counter.update({
+     
+      data: {
+        deals: counterData.deals + 3,
+        disputes: counterData.disputes + 1
+      }
+    });
+
+  
+  } catch (error) {
+    console.error('Error updating counters:', error);
+  }
+}, updateInterval);
 
 
 bot.command("contact", async (ctx) => {
@@ -569,7 +593,7 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 
 bot.command("how_to_use", async (ctx) => {
   try {
-    // const videoUrl = `https://utfs.io/f/a024ld4sUovPpEQRR8yxZ0eXRoHPjB3uSkIz5yQln8Yf4h6r`
+    const videoUrl = `https://utfs.io/f/a024ld4sUovPvVHLAfoMf2Yo4i9nB8p5JGKEP1sbxlR0hWqV`
     const message = `💼 How to use goldescrowbot💼
 
 ✅Step 1  :- Buyer create a group including only 3 people, buyer seller and goldescrowbot.
@@ -605,11 +629,11 @@ And despute message admin or use /contact command.
 📔@goldescrowbot📔
 
 👉Support @goldescrowbotadmin`;
-    // await ctx.replyWithVideo({url: videoUrl},{
-    //   caption: message,
-    //   parse_mode: "HTML"
-    // });
-    await ctx.reply(message)
+    await ctx.replyWithVideo({url: videoUrl},{
+      caption: message,
+      parse_mode: "HTML"
+    });
+    //await ctx.reply(message)
   } catch (error) {
     console.error(error)
   }
@@ -617,17 +641,8 @@ And despute message admin or use /contact command.
 
 bot.command("start", async (ctx) => {
   try {
-    let deals = 8788;
-    const intervalForDeals = setInterval(() => {
-      deals += 3;
-     
-    }, 60000); 
-    let disputes = 8788;
-    const intervalForDisputes = setInterval(() => {
-      disputes += 1;
-      }, 500000);
-  
-    const videoUrl = `https://utfs.io/f/a024ld4sUovPpEQRR8yxZ0eXRoHPjB3uSkIz5yQln8Yf4h6r`
+   
+    const videoUrl = `https://utfs.io/f/a024ld4sUovPvVHLAfoMf2Yo4i9nB8p5JGKEP1sbxlR0hWqV`
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
@@ -637,8 +652,8 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 ➡️  minimal Chain FEE
 
 🔄 𝗨𝗣𝗗𝗔𝗧𝗘𝗦 - 𝗩𝗢𝗨𝗖𝗛𝗘𝗦
-✅ 𝗗𝗘𝗔𝗟𝗦 𝗗𝗢𝗡𝗘: ${deals}
-⚖️ 𝗗𝗜𝗦𝗣𝗨𝗧𝗘𝗦 𝗛𝗔𝗡𝗗𝗟𝗘𝗗: ${disputes}
+✅ 𝗗𝗘𝗔𝗟𝗦 𝗗𝗢𝗡𝗘: ${updatedCounter.deals}
+⚖️ 𝗗𝗜𝗦𝗣𝗨𝗧𝗘𝗦 𝗛𝗔𝗡𝗗𝗟𝗘𝗗: ${updatedCounter.disputes}
 
 💬 Declare the seller or buyer with /seller or /buyer [BTC ADDRESS]
    (Your BTC/LTC address = [BTC ADDRESS])

@@ -35,3 +35,8 @@ model User {
   admin_user_id             BigInt?
   generate_status           Boolean?
 }
+
+model counter {
+  deals                    BigInt@id
+  disputes                 BigInt?
+}
