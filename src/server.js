@@ -640,7 +640,7 @@ And despute message admin or use /contact command.
 
 bot.command("start", async (ctx) => {
   try {
-
+    const counterData = await db.counter.findFirst();
     const videoUrl = `https://utfs.io/f/uJLJ3FMfDhIn2hB7aEYSmK15ATerUzLgcqwWGnJ7FhpokXsH`
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
@@ -651,8 +651,8 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 ➡️  minimal Chain FEE
 
 🔄 𝗨𝗣𝗗𝗔𝗧𝗘𝗦 - 𝗩𝗢𝗨𝗖𝗛𝗘𝗦
-✅ 𝗗𝗘𝗔𝗟𝗦 𝗗𝗢𝗡𝗘: ${updatedCounter.deals}
-⚖️ 𝗗𝗜𝗦𝗣𝗨𝗧𝗘𝗦 𝗛𝗔𝗡𝗗𝗟𝗘𝗗: ${updatedCounter.disputes}
+✅ 𝗗𝗘𝗔𝗟𝗦 𝗗𝗢𝗡𝗘: ${counterData.deals}
+⚖️ 𝗗𝗜𝗦𝗣𝗨𝗧𝗘𝗦 𝗛𝗔𝗡𝗗𝗟𝗘𝗗: ${counterData.disputes}
 
 💬 Declare the seller or buyer with /seller or /buyer [BTC ADDRESS]
    (Your BTC/LTC address = [BTC ADDRESS])
