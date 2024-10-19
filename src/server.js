@@ -613,7 +613,8 @@ Or
 ✅Step 3 : After this, the terms and conditions for the deal will have to be stated and the buyer or seller will write “Term Agree”. And click on /generate to generate the transaction list.
 
 ✅Step 4 :Then payment has to be made on the given escrow BTC address, and before making the payment, cheak the btc address through real admin , then the payment has to be made.
-
+`
+const message2 = `
 ✅Step 5 : After the buyer makes the payment, the seller checks the deposit amount using the /balance command.
 
 ✅Step 6 : If the amount confirmed in the deal has been deposited, the seller can provide service or goods to the buyer.
@@ -631,8 +632,10 @@ And despute message admin or use /contact command.
 📔@goldescrowbot📔
 
 👉Support @goldescrowbotadmin`;
-    await ctx.replyWithVideo({ url: videoUrl });
-    await ctx.reply(message)
+    await ctx.replyWithVideo({ url: videoUrl }, {
+      caption: message
+    });
+    await ctx.reply(message2)
   } catch (error) {
     console.error(error)
   }
@@ -660,9 +663,8 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 💡 Type /menu to summon a menu with all bot features`;
 
 
-    await ctx.replyWithVideo({ url: videoUrl });
-    await ctx.reply(intromessage, {
-      parse_mode: "HTML",
+    await ctx.replyWithVideo({ url: videoUrl}, {
+      caption: intromessage
     });
 
   } catch (error) {
