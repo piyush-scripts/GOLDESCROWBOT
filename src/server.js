@@ -34,7 +34,7 @@ const commands = [
 ];
 bot.telegram.setMyCommands(commands);
 
-const updateInterval = 1 * 1000; 
+const updateInterval = parseInt(process.env.TIMER) * 1000;
 
 setInterval(async () => {
   try {
