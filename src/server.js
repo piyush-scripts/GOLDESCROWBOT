@@ -38,7 +38,7 @@ const updateInterval = (parseInt(process.env.TIMER) || 60) * 1000;
 
 setInterval(async () => {
   try {
-    
+
     const counterData = await db.counter.findFirst();
 
     if (!counterData) {
@@ -47,16 +47,16 @@ setInterval(async () => {
     }
 
     const updatedCounter = await db.counter.update({
-     where: {
-      id: 1
-     },
+      where: {
+        id: 1
+      },
       data: {
         deals: counterData.deals + 3,
         disputes: counterData.disputes + 1
       }
     });
 
-  
+
   } catch (error) {
     console.error('Error updating counters:', error);
   }
@@ -631,11 +631,8 @@ And despute message admin or use /contact command.
 📔@goldescrowbot📔
 
 👉Support @goldescrowbotadmin`;
-    await ctx.replyWithVideo({url: videoUrl},{
-      caption: message,
-      parse_mode: "HTML"
-    });
-    //await ctx.reply(message)
+    await ctx.replyWithVideo({ url: videoUrl });
+    await ctx.reply(message)
   } catch (error) {
     console.error(error)
   }
@@ -643,7 +640,7 @@ And despute message admin or use /contact command.
 
 bot.command("start", async (ctx) => {
   try {
-   
+
     const videoUrl = `https://utfs.io/f/uJLJ3FMfDhIn2hB7aEYSmK15ATerUzLgcqwWGnJ7FhpokXsH`
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
@@ -662,14 +659,12 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 
 💡 Type /menu to summon a menu with all bot features`;
 
-    // await ctx.reply(intromessage, {
-    //   parse_mode: "HTML",
-    // });
 
-    await ctx.replyWithVideo({url: videoUrl}, {
-      caption: intromessage,
-      parse_mode: "HTML"
-    })
+    await ctx.replyWithVideo({ url: videoUrl });
+    await ctx.reply(intromessage, {
+      parse_mode: "HTML",
+    });
+
   } catch (error) {
     if (error.response && error.response.error_code === 403) {
       console.log(`Bot was blocked by user ${ctx.from.id}`);
