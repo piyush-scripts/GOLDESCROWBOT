@@ -632,9 +632,10 @@ And despute message admin or use /contact command.
 📔@goldescrowbot📔
 
 👉Support @goldescrowbotadmin`;
-    await ctx.replyWithVideo({ url: videoUrl }, {
-      caption: message
-    });
+await ctx.reply(message);
+   // await ctx.replyWithVideo({ url: videoUrl }, {
+   //   caption: message
+    //});
     await ctx.reply(message2)
   } catch (error) {
     console.error(error)
@@ -662,10 +663,10 @@ Welcome to 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™. This bot pro
 
 💡 Type /menu to summon a menu with all bot features`;
 
-
-    await ctx.replyWithVideo({ url: videoUrl}, {
-      caption: intromessage
-    });
+    await ctx.reply(intromessage);
+    //await ctx.replyWithVideo({ url: videoUrl}, {
+   //   caption: intromessage
+   // });
 
   } catch (error) {
     if (error.response && error.response.error_code === 403) {
