@@ -595,7 +595,7 @@ bot.action(/^release_(yes|no)_(\d+)$/, async (ctx) => {
 
 bot.command("how_to_use", async (ctx) => {
   try {
-    const videoUrl = `https://utfs.io/f/uJLJ3FMfDhIn2hB7aEYSmK15ATerUzLgcqwWGnJ7FhpokXsH`
+    const videoUrl = `https://utfs.io/f/a024ld4sUovPN8L2UzX8c649EabUl3BdYpyW7hjQSwR1kMti`
     const message = `💼 How to use goldescrowbot💼
 
 ✅Step 1  :- Buyer create a group including only 3 people, buyer seller and goldescrowbot.
@@ -644,7 +644,7 @@ And despute message admin or use /contact command.
 bot.command("start", async (ctx) => {
   try {
     const counterData = await db.counter.findFirst();
-    const videoUrl = `https://utfs.io/f/uJLJ3FMfDhIn2hB7aEYSmK15ATerUzLgcqwWGnJ7FhpokXsH`
+    const videoUrl = `https://utfs.io/f/a024ld4sUovPN8L2UzX8c649EabUl3BdYpyW7hjQSwR1kMti`
     const intromessage = `🌟 𝗚𝗢𝗟𝗗𝗘𝗦𝗖𝗥𝗢𝗪𝗕𝗢𝗧™ 𝘃.𝟭
 An Automated Telegram Escrow Service
 
